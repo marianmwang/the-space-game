@@ -161,7 +161,7 @@ keypress_happened:
 	beq $t7, 0x64, keypress_d
 	beq $t7, 0x73, keypress_s
 	beq $t7, 0x77, keypress_w
-	beq $t7, 0x70, exit # if they press p, go back to countdown, just exits right now
+	beq $t7, 0x70, restart # if they press p, go back to countdown, just exits right now
 
 no_response: 
 	jr $ra
@@ -229,7 +229,7 @@ keypress_s:
 	li $t6, SHIP_5L # t6 = ship[8]
 	add $t6, $t6, $t0 # t6 = ship[8] + current ship address
 	subi $t6, $t6, DISPLAYADDRESS # t6 = t6 - original displayAddress
-	li $t7, 32256 # t7 = 32256
+	li $t7, 25088 # t7 = 32256
 	bge $t6, $t7, no_response # if t6 >= t7, go back to playing
 	# erase top of ship
 	li $t6, SHIP_1L # t6 = ship[0]
@@ -284,19 +284,6 @@ keypress_w:
 
 ########## OBSTACLE FUNCTIONS ##########
 draw_obst: 
-	# generate random int
-	li $v0, 42
-	li $a0, 0
-	li $a1, 10000
-	syscall # a0 = random int < 3000
-	# check if int is less than 2998
-	li $t6, 9998 # t6 = 2998
-	ble $a0, $t6, keypress # if a0 < t5, go back to keypress
-	# generate random int
-	li $v0, 42
-	li $a0, 0
-	li $a1, 57
-	syscall # a0 = random int < 55
 	# obstacle colour
 	li $s0, BLUE0
 	li $s1, BLUE1
