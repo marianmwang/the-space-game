@@ -1,4 +1,4 @@
-##################################################################### what about this?
+#####################################################################
 #
 # CSC258 Summer2021Assembly Final Project
 # University of Toronto
@@ -41,6 +41,7 @@
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
+.eqv 	DELAY		200 # how long before next frame update
 
 	# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
@@ -48,11 +49,8 @@
 .eqv	RED 		0xf44336
 .eqv	YELLOW		0xffc107
 	# obstacle colours
-.eqv	BLUE0		0x263238 # darkest
-.eqv	BLUE1 		0x37474f
-.eqv	BLUE2		0x455a64
-.eqv	BLUE3		0x607d8b
-.eqv 	BLUE4 		0x90a4ae # lightest
+.eqv	DBROWN 		0x5d4037
+.eqv 	LBROWN		0x795548
 	# screen colours
 .eqv 	WHITE 		0xffffff
 .eqv 	PINK 		0xff8b80
@@ -74,25 +72,29 @@
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
 
-	obsAddress1: .word 0x0
-	obsAddress2: .word 0x0
-	obsAddress3: .word 0x0
-	obsAddress4: .word 0x0
-	obsAddress5: .word 0x0
+	obstacleNumber: .word 0x0 # randomly generated # of obstacles
+	obstacleAddress1: .word 0x0
+	obsstacleAddress2: .word 0x0
+	obsstacleAddress3: .word 0x0
+	obstacleAddress4: .word 0x0
+	obstacleAddress5: .word 0x0
 
 .text
 ########## WELCOME ##########
-	li $t1, WHITE # $t1 stores white
-	jal draw_start_screen # first game screen with instructions
-	j draw_start_screen_loop
+	#li $t1, WHITE # $t1 stores white
+	#jal draw_start_screen # first game screen with instructions
+	#j draw_start_screen_loop
 
 ########## MAIN PROGRAM ##########
 play_game:
 	#beq, $s0, 999, game_over # still need to code this
-	jal draw_ship
-	jal keypress
+	#jal draw_ship
+	#jal keypress
+	j
 	
-	li $a0, 10 # wait this many ms before updating
+	jal random_obst_sequence
+	
+	li $a0, DELAY # wait this many ms before updating
 	jal pause
 	j play_game
 
@@ -283,104 +285,198 @@ keypress_w:
 	jr $ra
 
 ########## OBSTACLE FUNCTIONS ##########
-draw_obst: 
-	# obstacle colour
-	li $s0, BLUE0
-	li $s1, BLUE1
-	li $s2, BLUE2
-	li $s3, BLUE3
-	li $s4, BLUE4
-	# get random location
-	li $t9, DISPLAYADDRESS # t9 = base display
-	add $t8, $a0, $0 # t8 = random number
-	sll $t8, $t8, 9 # t8 = t8 * 16
-	subi $t8, $t8, 0x2c # t8 = t8 - 11*4
-	add $t9, $t9, $t8 # t9 = base display + random number
-	# leftmost vertical strip
-	sw $s0, 508($t9)
-	sw $s0, 1020($t9)
-	sw $s0, 1532($t9)
-	sw $s0, 2044($t9)
-	sw $s0, 2556($t9)
-	sw $s0, 3068($t9)
-	sw $s0, 0($t9) # second
-	sw $s0, 512($t9)
-	sw $s4, 1024($t9)
-	sw $s3, 1536($t9)
-	sw $s3, 2048($t9)
-	sw $s3, 2560($t9)
-	sw $s0, 3072($t9)
-	sw $s0, 3584($t9)
-	sw $s0, 4($t9) # third
-	sw $s4, 516($t9)
-	sw $s3, 1028($t9)
-	sw $s3, 1540($t9)
-	sw $s3, 2052($t9)
-	sw $s2, 2564($t9)
-	sw $s2, 3076($t9)
-	sw $s0, 3588($t9)
-	sw $s0, 8($t9) # fourth
-	sw $s3, 520($t9)
-	sw $s0, 1032($t9)
-	sw $s0, 1544($t9)
-	sw $s2, 2056($t9)
-	sw $s2, 2568($t9)
-	sw $s0, 3080($t9)
-	sw $s0, 3592($t9)
-	sw $s0, 12($t9) # fifth
-	sw $s3, 524($t9)
-	sw $s0, 1036($t9)
-	sw $s1, 1548($t9)
-	sw $s4, 2060($t9)
-	sw $s2, 2572($t9)
-	sw $s0, 3084($t9)
-	sw $s0, 3596($t9)
-	sw $s0, 16($t9) # sixth
-	sw $s3, 528($t9)
-	sw $s1, 1040($t9)
-	sw $s1, 1552($t9)
-	sw $s4, 2064($t9)
-	sw $s0, 2576($t9)
-	sw $s1, 3088($t9)
-	sw $s0, 3600($t9)
-	sw $s0, 4112($t9)
-	sw $s0, 20($t9) # seventh
-	sw $s3, 532($t9)
-	sw $s3, 1044($t9)
-	sw $s4, 1556($t9)
-	sw $s2, 2068($t9)
-	sw $s0, 2580($t9)
-	sw $s1, 3092($t9)
-	sw $s1, 3604($t9)
-	sw $s0, 4116($t9)
-	sw $s0, 24($t9) # eighth
-	sw $s0, 536($t9)
-	sw $s2, 1048($t9)
-	sw $s2, 1560($t9)
-	sw $s1, 2072($t9)
-	sw $s1, 2584($t9)
-	sw $s1, 3096($t9)
-	sw $s1, 3608($t9)
-	sw $s0, 4120($t9)
-	sw $s0, 540($t9) # ninth
-	sw $s0, 1052($t9)
-	sw $s1, 1564($t9)
-	sw $s0, 2076($t9)
-	sw $s1, 2588($t9)
-	sw $s1, 3100($t9)
-	sw $s0, 3612($t9)
-	sw $s0, 4124($t9)
-	sw $s0, 1056($t9) # tenth
-	sw $s0, 1568($t9)
-	sw $s1, 2080($t9)
-	sw $s1, 2592($t9)
-	sw $s0, 3104($t9)
-	sw $s0, 3616($t9)
-	sw $s0, 1060($t9) # eleventh
-	sw $s0, 1572($t9)
-	sw $s0, 2084($t9)
-	sw $s0, 2596($t9)
-	sw $s0, 3108($t9)
+no_obstacles:
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+random_obst_sequence:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	jal random_number_obst # get random number of obstacles
+	beqz, $v0, no_obstacles # go back to main
+
+random_obst_sequence_loop:
+	jal random_horizontal
+	sw $v0, obstacleAddress1 # obstacleAddress1 = random location of obstacle 1
+	jal random_type_obst
+	addi $t2, $v0, 0 # t2 = random type of obstacle
+
+	addi $a0, $t1, 0 # a0 = random horizontal location of obstacle 
+	beqz, $t2, draw_obst1 # type = 0 --> obst1
+	jal draw_obst2 # type = 1 --> obst2
+	j no_obstacles
+
+random_obst_sequence_update:
+	addi $s0, $s0, -1 # decrease number of obstacles
+	j random_obst_sequence_loop # loop again
+
+random_horizontal: 
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42 # service call for random number generator
+	li $a0, 0 # id 0
+	li $a1, 513 # 0 <= int < 513
+	syscall
+	addi $a0, $a0, DISPLAYADDRESS
+	addi $v0, $a0, 0 # return random obstacle starting position in v0
+	
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+random_number_obst:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42
+	li $a0, 1 # id 1
+	li $a1, 6 # 0 <= int < 6
+	syscall
+	add $v0, $zero, $a0 # return random number of obstacles in v0
+	
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+random_type_obst:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42
+	li $a0, 2 # id 2
+	li $a1, 2 # 0 <= int < 2
+	syscall
+	add $v0, $zero, $a0 # return random number of obstacles in v0
+	
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+draw_obst1: # fat meteor
+	# a0 is current obstacle address argument
+	li $t0, RED
+	li $t1, YELLOW
+	li $t3, DBROWN
+	li $t4, LBROWN
+	# erase top parts
+	li $t5, BLACK
+	sw $t5, -2548($a0)
+	sw $t5, -2572($a0)
+	sw $t5, -3080($a0)
+	sw $t5, -3576($a0)
+	sw $t5, -4100($a0)
+	sw $t5, -4604($a0)
+	sw $t5, -5632($a0)
+	# draw bottom row first then up
+	sw $t0, 0($a0)
+	sw $t0, 4($a0)
+	sw $t0, -504($a0) # 2
+	sw $t1, -508($a0)
+	sw $t1, -512($a0)
+	sw $t0, -516($a0)
+	sw $t0, -520($a0)
+	sw $t0, -1012($a0) # 3
+	sw $t0, -1016($a0)
+	sw $t3, -1020($a0)
+	sw $t3, -1024($a0)
+	sw $t3, -1028($a0)
+	sw $t0, -1032($a0)
+	sw $t0, -1524($a0) # 4
+	sw $t1, -1528($a0)
+	sw $t3, -1532($a0)
+	sw $t4, -1536($a0)
+	sw $t3, -1540($a0)
+	sw $t1, -1544($a0)
+	sw $t0, -1548($a0)
+	sw $t0, -2036($a0) # 5
+	sw $t1, -2040($a0)
+	sw $t3, -2044($a0)
+	sw $t3, -2048($a0)
+	sw $t3, -2052($a0)
+	sw $t1, -2056($a0)
+	sw $t0, -2060($a0)
+	sw $t0, -2552($a0) # 6
+	sw $t1, -2556($a0)
+	sw $t1, -2560($a0)
+	sw $t1, -2564($a0)
+	sw $t0, -2568($a0)
+	sw $t0, -3064($a0) # 7
+	sw $t1, -3068($a0)
+	sw $t1, -3072($a0)
+	sw $t0, -3076($a0)
+	sw $t0, -3580($a0) # 8
+	sw $t1, -3584($a0)
+	sw $t0, -3588($a0)
+	sw $t0, -4092($a0) # 9
+	sw $t0, -4096($a0)
+	sw $t0, -4608($a0) # 10
+	sw $t0, -5120($a0) # 11
+	# increment obstacle address
+	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
+	addi $v0, $a0, 0 # return next obstacle address in v0
+	j random_obst_sequence_loop
+
+draw_obst2: # long meteor
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	# a0 is obstacle address
+	li $t0, RED
+	li $t1, YELLOW
+	li $t3, DBROWN
+	li $t4, LBROWN
+	# erase top parts
+	li $t5, BLACK
+	sw $t5, -3576($a0)
+	sw $t5, -5636($a0)
+	sw $t5, -7164($a0)
+	sw $t5, -9216($a0)
+	# draw bottom row first then up
+	sw $t0, 0($a0) # 1
+	sw $t0, -508($a0) # 2
+	sw $t1, -512($a0)
+	sw $t4, -1020($a0) # 3
+	sw $t4, -1024($a0)
+	sw $t0, -1028($a0)
+	sw $t0, -1528($a0) # 4
+	sw $t4, -1532($a0)
+	sw $t4, -1536($a0)
+	sw $t1, -1540($a0)
+	sw $t1, -2040($a0) # 5
+	sw $t4, -2044($a0)
+	sw $t3, -2048($a0)
+	sw $t1, -2052($a0)
+	sw $t0, -2552($a0) # 6
+	sw $t3, -2556($a0)
+	sw $t3, -2560($a0)
+	sw $t0, -2564($a0)
+	sw $t1, -3068($a0) # 7
+	sw $t3, -3072($a0)
+	sw $t0, -3076($a0)
+	sw $t0, -3580($a0) # 8
+	sw $t1, -3584($a0)
+	sw $t0, -3588($a0)
+	sw $t0, -4092($a0) # 9
+	sw $t1, -4096($a0)
+	sw $t0, -4100($a0)
+	sw $t0, -4604($a0) # 10
+	sw $t1, -4608($a0)
+	sw $t0, -5116($a0) # 11
+	sw $t1, -5120($a0)
+	sw $t0, -5628($a0) # 12
+	sw $t0, -5632($a0)
+	sw $t0, -6144($a0) # 13
+	sw $t0, -6656($a0) # 14
+	sw $t0, -7168($a0) # 15
+	sw $t0, -7680($a0) # 16
+	# increment obstacle address
+	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
+	addi $v0, $a0, 0 # returns next obstacle address in v0
+	
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
 
 ########## SCREEN FUNCTIONS ##########
 draw_start_screen:
