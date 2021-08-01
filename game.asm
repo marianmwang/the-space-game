@@ -36,29 +36,30 @@
 #####################################################################
 
 ########## CONSTANTS ##########
-# --  addresses
+	#  addresses
 .eqv	DISPLAYADDRESS 	0x10008000
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
 
-# -- ship colours
+	# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
 .eqv	BLUE		0x3f51b5
 .eqv	RED 		0xf44336
 .eqv	YELLOW		0xffc107
-# -- obstacle colours
+	# obstacle colours
 .eqv	BLUE0		0x263238 # darkest
 .eqv	BLUE1 		0x37474f
 .eqv	BLUE2		0x455a64
 .eqv	BLUE3		0x607d8b
 .eqv 	BLUE4 		0x90a4ae # lightest
-# -- screen colours
+	# screen colours
 .eqv 	WHITE 		0xffffff
 .eqv 	PINK 		0xff8b80
 .eqv 	GREY 		0x607d8b
 .eqv 	BLACK 		0x000000
-# -- ship dimensions
+	# ship dimensions
+.eqv 	SHIPADDRESS 0x1000ba10 # for restarting
 .eqv	SHIP_1L 	0 # offset from SHIPADDRESS
 .eqv 	SHIP_1R 	8
 .eqv 	SHIP_2L 	508
@@ -72,11 +73,18 @@
 
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
+
+	obsAddress1: .word 0x0
+	obsAddress2: .word 0x0
+	obsAddress3: .word 0x0
+	obsAddress4: .word 0x0
+	obsAddress5: .word 0x0
+
 .text
-	#li $t1, WHITE # $t1 stores white
-	#jal draw_start_screen # first game screen with instructions
-	#j draw_start_screen_loop
-	#j draw_countdown
+########## WELCOME ##########
+	li $t1, WHITE # $t1 stores white
+	jal draw_start_screen # first game screen with instructions
+	j draw_start_screen_loop
 
 ########## MAIN PROGRAM ##########
 play_game:
@@ -96,13 +104,13 @@ pause:
 
 ########## SHIP FUNCTIONS ##########
 draw_ship:
-# -- load colours and current location
+	# load colours and current location
 	lw $t0, shipAddress # t0 = current location of SHIP_1L
 	li $t1, BLUE # t1 stores blue
 	li $t2, LIGHTBLUE # t2 stores light blue
 	li $t3, RED # t3 stores red
 	li $t4, YELLOW # t4 stores yellow
-# -- start drawing
+	# start drawing
 	li $t6, SHIP_1L # t6 = ship[0]
 	add $t6, $t6, $t0 # t6 = ship[0] + SHIPADDRESS
 	sw $t3, 0($t6) # first row of ship
@@ -159,7 +167,7 @@ no_response:
 	jr $ra
 
 keypress_a:
-# -- check if ship is at left edge
+	# check if ship is at left edge
 	li $t6, SHIP_2L # t6 = ship[2]
 	add $t6, $t6, $t0 # t6 = current SHIP_2L location
 	subi $t6, $t6, DISPLAYADDRESS # t6 = t6 - original displayAddress
@@ -167,7 +175,7 @@ keypress_a:
 	div $t6, $t7 # hi = t6 % t7 (if divisible by 512, we are at the left edge)
 	mfhi $t7 # t7 = hi
 	beq $t7, $0, no_response # go back if no keypress
-# -- erase right of ship
+	# erase right of ship
 	li $t6, SHIP_1R # t6 = ship[1]
 	add $t6, $t6, $t0 # t6 = ship[1] + SHIPADDRESS
 	sw $0, 0($t6) # erase rightmost bit of row 1
@@ -188,7 +196,7 @@ keypress_a:
 	jr $ra
 
 keypress_d:
-# -- check if ship is at right edge
+	# check if ship is at right edge
 	li $t6, SHIP_3R # t6 = ship[5]
 	add $t6, $t6, $t0 # t6 = ship[5] + current ship address
 	subi $t6, $t6, 0x10007ffc # t6 = t6 - (original displayAddress - 4)
@@ -196,7 +204,7 @@ keypress_d:
 	div $t6, $t7 # hi = t6 % t7
 	mfhi $t7 # t7 = hi
 	beq $t7, $0, no_response	
-# -- erase left of ship
+	# erase left of ship
 	li $t6, SHIP_1L # t6 = ship[0]
 	add $t6, $t6, $t0 # t6 = ship[0] + current ship address
 	sw $0, 0($t6) # erase leftmost bit of row 1
@@ -217,13 +225,13 @@ keypress_d:
 	jr $ra
 
 keypress_s:
-# -- check if ship is at bottom
+	# check if ship is at bottom
 	li $t6, SHIP_5L # t6 = ship[8]
 	add $t6, $t6, $t0 # t6 = ship[8] + current ship address
 	subi $t6, $t6, DISPLAYADDRESS # t6 = t6 - original displayAddress
 	li $t7, 32256 # t7 = 32256
 	bge $t6, $t7, no_response # if t6 >= t7, go back to playing
-# -- erase top of ship
+	# erase top of ship
 	li $t6, SHIP_1L # t6 = ship[0]
 	add $t6, $t6, $t0 # t6 = ship[0] + current ship address
 	sw $0, 0($t6) # erase leftmost bit of row 1
@@ -247,13 +255,13 @@ keypress_s:
 	jr $ra
 
 keypress_w:
-# -- check if ship is at top
+	# check if ship is at top
 	li $t6, SHIP_1L # t6 = ship[0]
 	add $t6, $t6, $t0 # t6 = ship[0] + current ship address
 	subi $t6, $t6, DISPLAYADDRESS # t6 = t6 - original displayAddress
 	li $t7, 512 # t7 = 512
 	ble $t6, $t7, no_response # if t6 >= t7, branch
-# -- erase bottom of ship
+	# erase bottom of ship
 	li $t6, SHIP_5L # t6 = ship[8]
 	add $t6, $t6, $t0 # t6 = ship[8] + current ship address
 	sw $0, 0($t6) # erase leftmost bit of row 5
@@ -276,32 +284,32 @@ keypress_w:
 
 ########## OBSTACLE FUNCTIONS ##########
 draw_obst: 
-# -- generate random int
+	# generate random int
 	li $v0, 42
 	li $a0, 0
 	li $a1, 10000
 	syscall # a0 = random int < 3000
-# -- check if int is less than 2998
+	# check if int is less than 2998
 	li $t6, 9998 # t6 = 2998
 	ble $a0, $t6, keypress # if a0 < t5, go back to keypress
-# -- generate random int
+	# generate random int
 	li $v0, 42
 	li $a0, 0
 	li $a1, 57
 	syscall # a0 = random int < 55
-# -- obstacle colour
+	# obstacle colour
 	li $s0, BLUE0
 	li $s1, BLUE1
 	li $s2, BLUE2
 	li $s3, BLUE3
 	li $s4, BLUE4
-# -- get random location
+	# get random location
 	li $t9, DISPLAYADDRESS # t9 = base display
 	add $t8, $a0, $0 # t8 = random number
 	sll $t8, $t8, 9 # t8 = t8 * 16
 	subi $t8, $t8, 0x2c # t8 = t8 - 11*4
 	add $t9, $t9, $t8 # t9 = base display + random number
-# -- leftmost vertical strip
+	# leftmost vertical strip
 	sw $s0, 508($t9)
 	sw $s0, 1020($t9)
 	sw $s0, 1532($t9)
@@ -445,7 +453,7 @@ draw_start_screen_loop:
 	li $a0, 100 # delay
 	li $v0, 32
 	syscall
-# -- check kb input
+	# check kb input
 	li $t9, 0xffff0000 # t9 = 1 if keypress
 	lw $t8, 0($t9) 
 	beq $t8, 1, restart # if key was pressed, check to restart
@@ -457,6 +465,9 @@ restart:
 	li $t1, BLACK
 	jal draw_start_screen # erase "welcome to... WASD"
 	jal draw_p2start # erase "press p to start"
+	li $t0, SHIPADDRESS # reset ship location
+	sw $t0, shipAddress
+	jal draw_countdown # countdown
 	j play_game # start the game
 
 draw_p2start: # draw "press p to start"
@@ -540,7 +551,7 @@ draw_countdown:
 	li $t1, WHITE
 
 draw_board:
-# -- draw the frame
+	# draw the frame
 	li $t0, DISPLAYADDRESS
 	addi $t0, $t0, 27648
 	jal draw_vertical_line
@@ -558,7 +569,7 @@ draw_board:
 	addi $t0, $t0, 32252
 	li $t6, 0
 	jal draw_horizontal_line
-# -- draw hearts
+	# draw hearts
 	li $t2, PINK
 	li $t3, RED
 	li $t0, DISPLAYADDRESS
@@ -572,7 +583,7 @@ draw_board:
 	jal draw_heart
 	addi $t0, $t0, 24
 	jal draw_heart
-# -- draw points (00000)
+	# draw points (00000)
 	li $t4, YELLOW
 	li $t0, DISPLAYADDRESS
 	addi $t0, $t0, 29676
@@ -585,7 +596,7 @@ draw_board:
 	jal draw_zero
 	subi $t0, $t0, 16
 	jal draw_zero
-# -- draw letters
+	# draw letters
 	li $t0, DISPLAYADDRESS
 	sw $t1, 26632($t0)	# draw "H" in "HP"
 	sw $t1, 27144($t0)
@@ -656,7 +667,10 @@ draw_board:
 	addi $sp, $sp, 4
 	jr $ra # go back to play_game, stackPush is in draw_countdown
 
-# -- drawing letters and numbers functions
+	# drawing letters and numbers functions
+
+
+########## DRAWING LETTERS AND SYMBOLS ##########
 draw_W:
 	sw $t1, 0($t0)
 	sw $t1, 512($t0)
