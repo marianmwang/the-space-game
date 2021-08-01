@@ -599,7 +599,7 @@ draw_countdown:
 	lw $t0, displayAddress
 	addi $t0, $t0, 9432
 	jal draw_three	# draw "3"
-	li $a0, 300
+	li $a0, 1000
 	li $v0, 32
 	syscall		# display for several seconds
 	lw $t1, black
@@ -607,7 +607,7 @@ draw_countdown:
 	
 	lw $t1, white
 	jal draw_two	# draw "2"
-	li $a0, 300
+	li $a0, 1000
 	li $v0, 32
 	syscall		# display for several seconds
 	lw $t1, black
@@ -615,7 +615,7 @@ draw_countdown:
 	
 	lw $t1, white
 	jal draw_one	# draw "1"
-	li $a0, 300
+	li $a0, 1000
 	li $v0, 32
 	syscall		# display for several seconds
 	lw $t1, black
@@ -630,13 +630,13 @@ draw_countdown:
 	jal draw_R
 	jal draw_T
 	jal draw_exclamation
-	li $a0, 300
+	li $a0, 500
 	li $v0, 32
 	syscall		# display for several seconds
 	lw $t0, displayAddress
 	addi $t0, $t0, 10948
 	lw $t1, black
-	jal draw_S	# earse "START!"
+	jal draw_S	# erase "START!"
 	jal draw_T
 	jal draw_A
 	jal draw_R
