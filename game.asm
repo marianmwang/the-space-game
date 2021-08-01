@@ -71,13 +71,11 @@
 
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
-
-	obstacleNumber: .word 0x0 # randomly generated # of obstacles
-	obstacleAddress1: .word 0x0
-	obsstacleAddress2: .word 0x0
-	obsstacleAddress3: .word 0x0
-	obstacleAddress4: .word 0x0
-	obstacleAddress5: .word 0x0
+	
+	test: .word 0x100080f0
+	obstacleNumber: .word 0x0 # current # of obstacles on screen
+	obstacleTypes: .word 0x0, 0x0, 0x0, 0x0, 0x0 # types of up to 5 obstacles
+	obstacleAddresses: .word 0x100080f0, 0x10008120, 0x10008300, 0x10008100, 0x10008200 # addresses of up to 5 obstacles
 
 .text
 ########## WELCOME ##########
@@ -90,10 +88,28 @@ play_game:
 	#beq, $s0, 999, game_over # still need to code this
 	#jal draw_ship
 	#jal keypress
-	j
 	
-	jal random_obst_sequence
 	
+	lw $a0, obstacleAddresses
+	jal draw_obst1
+	sw $v0, obstacleAddresses
+	
+	lw $a0, obstacleAddresses+4
+	jal draw_obst2
+	sw $v0, obstacleAddresses+4
+	
+	lw $a0, obstacleAddresses+8
+	jal draw_obst1
+	sw $v0, obstacleAddresses+8
+	
+	lw $a0, obstacleAddresses+12
+	jal draw_obst2
+	sw $v0, obstacleAddresses+12
+	
+	lw $a0, obstacleAddresses+16
+	jal draw_obst1
+	sw $v0, obstacleAddresses+16
+
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
 	j play_game
@@ -285,33 +301,7 @@ keypress_w:
 	jr $ra
 
 ########## OBSTACLE FUNCTIONS ##########
-no_obstacles:
-	lw $ra, 0($sp) # pop ra from stack
-	addi $sp, $sp, 4
-	jr $ra
-
-random_obst_sequence:
-	addi $sp, $sp, -4 # push ra to stack
-	sw $ra, 0($sp)
-	jal random_number_obst # get random number of obstacles
-	beqz, $v0, no_obstacles # go back to main
-
-random_obst_sequence_loop:
-	jal random_horizontal
-	sw $v0, obstacleAddress1 # obstacleAddress1 = random location of obstacle 1
-	jal random_type_obst
-	addi $t2, $v0, 0 # t2 = random type of obstacle
-
-	addi $a0, $t1, 0 # a0 = random horizontal location of obstacle 
-	beqz, $t2, draw_obst1 # type = 0 --> obst1
-	jal draw_obst2 # type = 1 --> obst2
-	j no_obstacles
-
-random_obst_sequence_update:
-	addi $s0, $s0, -1 # decrease number of obstacles
-	j random_obst_sequence_loop # loop again
-
-random_horizontal: 
+random_obst_address: 
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	
@@ -319,14 +309,26 @@ random_horizontal:
 	li $a0, 0 # id 0
 	li $a1, 513 # 0 <= int < 513
 	syscall
-	addi $a0, $a0, DISPLAYADDRESS
-	addi $v0, $a0, 0 # return random obstacle starting position in v0
+	addi $t0, $a0, DISPLAYADDRESS # t0 = first random horizontal
+	sw $t0, obstacleAddresses
+	syscall
+	addi $t1, $a0, DISPLAYADDRESS # t0 = second random horizontal
+	sw $t1, obstacleAddresses+4
+	syscall
+	addi $t2, $a0, DISPLAYADDRESS # t0 = third random horizontal
+	sw $t2, obstacleAddresses+8
+	syscall
+	addi $t3, $a0, DISPLAYADDRESS # t0 = fourth random horizontal
+	sw $t3, obstacleAddresses+12
+	syscall
+	addi $t4, $a0, DISPLAYADDRESS # t0 = fifth random horizontal
+	sw $t4, obstacleAddresses+16
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
 	jr $ra
 
-random_number_obst:
+random_obst_number:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	
@@ -334,13 +336,13 @@ random_number_obst:
 	li $a0, 1 # id 1
 	li $a1, 6 # 0 <= int < 6
 	syscall
-	add $v0, $zero, $a0 # return random number of obstacles in v0
+	sw $a0, obstacleNumber # return random number of obstacles in obstacleNumber
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
 	jr $ra
 
-random_type_obst:
+random_obst_type:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	
@@ -348,7 +350,15 @@ random_type_obst:
 	li $a0, 2 # id 2
 	li $a1, 2 # 0 <= int < 2
 	syscall
-	add $v0, $zero, $a0 # return random number of obstacles in v0
+	sw $t0, obstacleTypes # first random type
+	syscall
+	sw $t1, obstacleTypes+4 # second random type
+	syscall
+	sw $t2, obstacleTypes+8 # third random type
+	syscall
+	sw $t3, obstacleTypes+12 # fourth random type
+	syscall
+	sw $t4, obstacleTypes+16 # fifth random type
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
@@ -416,11 +426,9 @@ draw_obst1: # fat meteor
 	# increment obstacle address
 	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
 	addi $v0, $a0, 0 # return next obstacle address in v0
-	j random_obst_sequence_loop
+	jr $ra
 
 draw_obst2: # long meteor
-	addi $sp, $sp, -4 # push ra to stack
-	sw $ra, 0($sp)
 	# a0 is obstacle address
 	li $t0, RED
 	li $t1, YELLOW
@@ -473,9 +481,6 @@ draw_obst2: # long meteor
 	# increment obstacle address
 	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
 	addi $v0, $a0, 0 # returns next obstacle address in v0
-	
-	lw $ra, 0($sp) # pop ra from stack
-	addi $sp, $sp, 4
 	jr $ra
 
 ########## SCREEN FUNCTIONS ##########
