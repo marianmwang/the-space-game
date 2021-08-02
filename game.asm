@@ -56,6 +56,8 @@
 .eqv 	PINK 		0xff8b80
 .eqv 	GREY 		0x607d8b
 .eqv 	BLACK 		0x000000
+	# enemy ship colours
+.eqv 	DARKRED 	0xb71c1c
 	# ship dimensions
 .eqv 	SHIPADDRESS 0x1000ba10 # for restarting
 .eqv	SHIP_1L 	0 # offset from SHIPADDRESS
@@ -76,6 +78,9 @@
 	
 	test: .word 0x100080f0
 	
+	# ENEMY SHIPS
+	enemyShipLocation: .word 0x1000accc
+	
 	# OBSTACLES
 	obstacleCtr1: .byte 5 # counter for obstacle speed
 	obstacleNumber: .byte 0 # current # of obstacles on screen
@@ -94,13 +99,15 @@ play_game:
 	jal draw_ship
 	jal keypress
 	
-	
+	lw $a0, enemyShipLocation
+	jal draw_enemy_ship
+
 	lw $a0, obstacleAddresses
-	jal draw_obst1
+	jal draw_obst2
 	sw $v0, obstacleAddresses
 
 	lw $a0, obstacleAddresses+4
-	jal draw_obst2
+	jal draw_obst1
 	sw $v0, obstacleAddresses+4
 
 	li $a0, DELAY # wait this many ms before updating
@@ -294,8 +301,9 @@ keypress_w:
 	jr $ra
 
 ########## OBSTACLE FUNCTIONS ##########
-reset_obstacle:
-	li $v0, DISPLAYADDRESS
+delay_obstacle:
+	li $s3, 1
+	addi $v0, $a0, 0
 	jr $ra
 
 random_obst_address: 
@@ -363,15 +371,9 @@ random_obst_type:
 	addi $sp, $sp, 4
 	jr $ra
 
-obst1_check:
-	lb $t0, obstacleCtr1
-	beqz $t0, draw_obst1
-	addi $t0, $t0, -1 # decerement
-	jr $ra # go back
-
 draw_obst1: # fat and slow meteor
-	li $t0, OBST1 # reset counter
-	sb $t0, obstacleCtr1
+	beqz $s3, delay_obstacle
+	li $s3, 0
 	# a0 is current obstacle address argument
 	li $t0, RED
 	li $t1, YELLOW
@@ -544,10 +546,59 @@ draw_obst2_15:
 	sw $t0, -7168($a0) # 15
 draw_obst2_16:
 	sw $t0, -7680($a0) # 16
-update_obst2_address:
+update_obst2:
 	# increment obstacle address
 	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
 	addi $v0, $a0, 0 # returns next obstacle address in v0
+	jr $ra
+
+########## ENEMY SHIP FUNCTINOS ##########
+draw_enemy_ship:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+
+	li $t0, RED
+	li $t1, DARKRED
+	li $t2, LIGHTBLUE
+	
+	# left to right column, top to bottom
+draw_enemy_ship1:
+	sw $t0, 0($a0)
+draw_enemy_ship2:
+	sw $t2, -508($a0)
+	sw $t0, 4($a0)
+draw_enemy_ship3:
+	sw $t2, -504($a0)
+	sw $t0, 8($a0)
+draw_enemy_ship4:
+	sw $t2, -500($a0)
+	sw $t0, 12($a0)
+	sw $t1, 524($a0)
+draw_enemy_ship5:
+	sw $t0, -496($a0)
+	sw $t0, 16($a0)
+	sw $t1, 528($a0)
+draw_enemy_ship6:
+	sw $t0, -492($a0)
+	sw $t1, 20($a0)
+	sw $t1, 532($a0)
+draw_enemy_ship7:
+	sw $t0, -488($a0)
+	sw $t1, 24($a0)
+	sw $t1, 536($a0)
+draw_enemy_ship8:
+	sw $t0, -996($a0)
+	sw $t1, -484($a0)
+	sw $t0, 28($a0)
+draw_enemy_ship9:
+	sw $t0, -992($a0)
+	sw $t0, -480($a0)
+	sw $t0, 32($a0)
+draw_enemy_ship10:
+	sw $t0, -988($a0)
+update_enemy_ship:
+	lw $ra, 0($sp) # pop from stack
+	addi $sp, $sp, 4
 	jr $ra
 
 ########## SCREEN FUNCTIONS ##########

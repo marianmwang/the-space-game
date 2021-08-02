@@ -71,6 +71,7 @@ pause:
 	li $v0, 32
 	syscall
 	jr $ra
+
 ########## OBSTACLE FUNCTIONS ##########
 
 draw_obst1: # fat and slow meteor
