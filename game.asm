@@ -41,7 +41,7 @@
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
-.eqv 	DELAY		10 # how long before next frame update
+.eqv 	DELAY		30 # how long before next frame update
 
 	# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
@@ -81,7 +81,7 @@
 	# ENEMY SHIPS
 	enemyShipLocation1: .word 0x1000bba0
 	enemyShipLocation2: .word 0x100088a0
-	enemyShipLocation3: .word 0x1000aba0
+	enemyShipLocation3: .word 0x1000accc
 	
 	# OBSTACLES
 	obstacleNumber: .byte 0 # current # of obstacles on screen
@@ -92,10 +92,10 @@
 
 .text
 ########## WELCOME ##########
-	li $t1, WHITE # $t1 stores white
-	jal draw_start_screen # first game screen with instructions
-	j draw_start_screen_loop
-	li $s3, 1
+	#li $t1, WHITE # $t1 stores white
+	#jal draw_start_screen # first game screen with instructions
+	#j draw_start_screen_loop
+	#li $s3, 1
 
 ########## MAIN PROGRAM ##########
 play_game:
@@ -576,7 +576,7 @@ random_direction:
 	
 	li $v0, 42
 	li $a0, 4 # id 4
-	li $a1, 3 # 0 <= int < 3
+	li $a1, 4 # 0 <= int < 4
 	syscall
 	
 	addi $v0, $a0, 0
@@ -658,17 +658,17 @@ erase:
 	sw $t3, 1048($a0)
 	sw $t3, 1052($a0)
 choose_direction:
-	bgt $a0, 0x1000e200, update_enemy_shipUL # check if at the bottom
-	blt $a0, 0x1000847c, update_enemy_shipDL # check if at the top
+	bgt $a0, 0x1000e400, update_enemy_shipUL # check if at the bottom
+	blt $a0, 0x10008477, update_enemy_shipDL # check if at the top
 	
 	addi $t6, $a0, 0 # save ship location
 	jal random_direction
 	addi $t0, $v0, 0 # get random direction
 	addi $a0, $t6, 0 # restore ship location
 	
-	beqz, $t0, update_enemy_shipL
-	beq $t0, 1, update_enemy_shipUL
-	j update_enemy_shipDL
+	beqz, $t0, update_enemy_shipDL # 25% chance
+	beq $t0, 1, update_enemy_shipUL # 25 % chance
+	j update_enemy_shipL # 50% chance
 
 update_enemy_shipL:
 	addi $v0, $a0, -4 # move to the left
