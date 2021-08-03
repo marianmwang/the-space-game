@@ -91,6 +91,18 @@
 	#j draw_start_screen_loop
 
 ########## MAIN PROGRAM ##########
+random_location:
+	li $s3, 0
+	li $s4, 4
+	lw $s5, obstacleAddresses
+	# Random Number Generator
+	li $v0, 42 # Service 42, random int range
+	li $a0, 0 # Select random generator 0
+	li $a1, 121 # Select upper bound of random number
+	syscall # Generate random int (returns in $a0)
+	mult	$a0, $s4
+	mflo	$s4
+	add $s5, $s5, $s4
 play_game:
 	#beq, $s0, 999, game_over # still need to code this
 	#jal draw_ship
@@ -99,9 +111,9 @@ play_game:
 	#lw $a0, enemyShipLocation
 	#jal draw_enemy_ship
 	
-	lw $a0, obstacleAddress
+	move $a0, $s5
 	jal draw_obst1
-	sw $a0, obstacleAddress
+	move $s5, $v0
 
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
@@ -361,7 +373,7 @@ draw_obst1: # fat and slow meteor
 	sw $t5, -5632($a0) # erase
 	
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x1000f800, exit # don't exit but update a counter for how many meteors are on screen
+	bgt, $a0, 0x1000f800, random_location # don't exit but update a counter for how many meteors are on screen
 	bgt, $a0, 0x1000f600, draw_obst1_11
 	bgt, $a0, 0x1000f400, draw_obst1_10
 	bgt, $a0, 0x1000f200, draw_obst1_9
