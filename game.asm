@@ -70,8 +70,6 @@
 .eqv 	SHIP_4R 	1548
 .eqv 	SHIP_5L 	2044
 .eqv 	SHIP_5R 	2052
-	# obstacle speeds
-.eqv 	OBST1 		5 # higher number = slower, moves every X framebuffers
 
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
@@ -82,10 +80,9 @@
 	enemyShipLocation: .word 0x1000accc
 	
 	# OBSTACLES
-	obstacleCtr1: .byte 5 # counter for obstacle speed
 	obstacleNumber: .byte 0 # current # of obstacles on screen
-	obstacleTypes: .byte 0, 0, 0, 0, 0 # types of up to 5 obstacles
-	obstacleAddresses: .word 0x10008f00, 0x10008fa0, 0x10008300, 0x10008100, 0x10008200 # addresses of up to 5 obstacles
+	obstacleAddress: .word 0x10008888
+	obstacleType: .byte 0
 
 .text
 ########## WELCOME ##########
@@ -96,19 +93,15 @@
 ########## MAIN PROGRAM ##########
 play_game:
 	#beq, $s0, 999, game_over # still need to code this
-	jal draw_ship
-	jal keypress
+	#jal draw_ship
+	#jal keypress
 	
-	lw $a0, enemyShipLocation
-	jal draw_enemy_ship
-
-	lw $a0, obstacleAddresses
-	jal draw_obst2
-	sw $v0, obstacleAddresses
-
-	lw $a0, obstacleAddresses+4
+	#lw $a0, enemyShipLocation
+	#jal draw_enemy_ship
+	
+	lw $a0, obstacleAddress
 	jal draw_obst1
-	sw $v0, obstacleAddresses+4
+	sw $a0, obstacleAddress
 
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
@@ -313,23 +306,12 @@ random_obst_address:
 	li $v0, 42 # service call for random number generator
 	li $a0, 0 # id 0
 	li $a1, 497 # 0 <= int < 497
-	addi $a1, $a1, 9 # so that meteors don't spawn on the very left side or right
+	syscall
 
-	syscall
-	addi $t0, $a0, DISPLAYADDRESS # t0 = first random horizontal
-	sw $t0, obstacleAddresses
-	syscall
-	addi $t1, $a0, DISPLAYADDRESS # t0 = second random horizontal
-	sw $t1, obstacleAddresses+4
-	syscall
-	addi $t2, $a0, DISPLAYADDRESS # t0 = third random horizontal
-	sw $t2, obstacleAddresses+8
-	syscall
-	addi $t3, $a0, DISPLAYADDRESS # t0 = fourth random horizontal
-	sw $t3, obstacleAddresses+12
-	syscall
-	addi $t4, $a0, DISPLAYADDRESS # t0 = fifth random horizontal
-	sw $t4, obstacleAddresses+16
+	addi $a0, $a0, 9 # so that meteors don't spawn on the very left side or right
+	sll $a0, $a0, 2 # multiply by 4
+
+	addi $v0, $a0, DISPLAYADDRESS # return in v0
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
@@ -341,9 +323,9 @@ random_obst_number:
 	
 	li $v0, 42
 	li $a0, 1 # id 1
-	li $a1, 6 # 0 <= int < 6
+	li $a1, 3 # 0 <= int < 3
 	syscall
-	sw $a0, obstacleNumber # return random number of obstacles in obstacleNumber
+	addi $v0, $a0, 0 # return in v0
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
@@ -356,23 +338,17 @@ random_obst_type:
 	li $v0, 42
 	li $a0, 2 # id 2
 	li $a1, 2 # 0 <= int < 2
-	syscall
-	sw $t0, obstacleTypes # first random type
-	syscall
-	sw $t1, obstacleTypes+4 # second random type
-	syscall
-	sw $t2, obstacleTypes+8 # third random type
-	syscall
-	sw $t3, obstacleTypes+12 # fourth random type
-	syscall
-	sw $t4, obstacleTypes+16 # fifth random type
+	syscall 
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
 	jr $ra
 
 draw_obst1: # fat and slow meteor
-	beqz $s3, delay_obstacle
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+
+	beqz $s3, delay_obstacle # don't update the address this time around
 	li $s3, 0
 	# a0 is current obstacle address argument
 	li $t0, RED
@@ -461,9 +437,14 @@ update_obst1:
 	# increment obstacle address
 	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
 	addi $v0, $a0, 0 # return next obstacle address in v0
+
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
 	jr $ra
 
 draw_obst2: # long meteor
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
 	# a0 is obstacle address
 	li $t0, RED
 	li $t1, YELLOW
@@ -550,6 +531,9 @@ update_obst2:
 	# increment obstacle address
 	addi $a0, $a0, 512 # a0 = current obst address + 512 (next row)
 	addi $v0, $a0, 0 # returns next obstacle address in v0
+	
+	lw $ra, 0($sp) # pop from stack
+	addi $sp, $sp, 4
 	jr $ra
 
 ########## ENEMY SHIP FUNCTINOS ##########
