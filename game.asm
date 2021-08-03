@@ -41,7 +41,7 @@
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
-.eqv 	DELAY		10 # how long before next frame update
+.eqv 	DELAY		5 # how long before next frame update
 
 	# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
@@ -81,7 +81,8 @@
 	
 	# OBSTACLES
 	obstacleNumber: .byte 0 # current # of obstacles on screen
-	obstacleAddress: .word 0x10008888
+	obstacleAddress1: .word 0x1000800c
+	obstacleAddress2: .word 0x1000800c
 	obstacleType: .byte 0
 
 .text
@@ -91,22 +92,20 @@
 	#j draw_start_screen_loop
 
 ########## MAIN PROGRAM ##########
-random_location:
-	li $s3, 0
-	li $s4, 4
-	lw $s5, obstacleAddresses
-	# Random Number Generator
-	li $v0, 42 # Service 42, random int range
-	li $a0, 0 # Select random generator 0
-	li $a1, 121 # Select upper bound of random number
-	syscall # Generate random int (returns in $a0)
-	mult	$a0, $s4
-	mflo	$s4
-	add $s5, $s5, $s4
+random_location1:
+	lw $s5, obstacleAddress1
+	jal random_obst_address
+	addi $s5, $v0, 0
+
+random_location2:
+	lw $s4, obstacleAddress2
+	jal random_obst_address
+	addi $s4, $v0, 0
+
 play_game:
 	#beq, $s0, 999, game_over # still need to code this
-	#jal draw_ship
-	#jal keypress
+	jal draw_ship
+	jal keypress
 	
 	#lw $a0, enemyShipLocation
 	#jal draw_enemy_ship
@@ -114,6 +113,10 @@ play_game:
 	move $a0, $s5
 	jal draw_obst1
 	move $s5, $v0
+	
+	move $a0, $s4
+	jal draw_obst2
+	move $s4, $v0
 
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
@@ -317,13 +320,12 @@ random_obst_address:
 	
 	li $v0, 42 # service call for random number generator
 	li $a0, 0 # id 0
-	li $a1, 497 # 0 <= int < 497
+	li $a1, 121 # 0 <= int < 121
 	syscall
 
-	addi $a0, $a0, 9 # so that meteors don't spawn on the very left side or right
 	sll $a0, $a0, 2 # multiply by 4
 
-	addi $v0, $a0, DISPLAYADDRESS # return in v0
+	add $v0, $a0, $s5 # return in v0
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
@@ -373,7 +375,7 @@ draw_obst1: # fat and slow meteor
 	sw $t5, -5632($a0) # erase
 	
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x1000f800, random_location # don't exit but update a counter for how many meteors are on screen
+	bgt, $a0, 0x1000f800, random_location1 # don't exit but update a counter for how many meteors are on screen
 	bgt, $a0, 0x1000f600, draw_obst1_11
 	bgt, $a0, 0x1000f400, draw_obst1_10
 	bgt, $a0, 0x1000f200, draw_obst1_9
@@ -466,7 +468,7 @@ draw_obst2: # long meteor
 	# erase topmost pixel
 	sw $t5, -8192($a0)
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x10010200, exit
+	bgt, $a0, 0x10010200, random_location2
 	bgt, $a0, 0x10010000, draw_obst2_16
 	bgt, $a0, 0x1000fe00, draw_obst2_15
 	bgt, $a0, 0x1000fc00, draw_obst2_14
@@ -670,7 +672,7 @@ restart:
 	li $t0, SHIPADDRESS # reset ship location
 	sw $t0, shipAddress
 	jal draw_countdown # countdown
-	j play_game # start the game
+	j random_location1 # get random location for obstacle
 
 draw_p2start: # draw "press p to start"
 	addi $sp, $sp, -4 # push to stack
