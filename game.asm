@@ -79,7 +79,9 @@
 	test: .word 0x100080f0
 	
 	# ENEMY SHIPS
-	enemyShipLocation: .word 0x1000accc
+	enemyShipLocation1: .word 0x1000bba0
+	enemyShipLocation2: .word 0x100088a0
+	enemyShipLocation3: .word 0x1000aba0
 	
 	# OBSTACLES
 	obstacleNumber: .byte 0 # current # of obstacles on screen
@@ -90,10 +92,10 @@
 
 .text
 ########## WELCOME ##########
-	#li $t1, WHITE # $t1 stores white
-	#jal draw_start_screen # first game screen with instructions
-	#j draw_start_screen_loop
-	#li $s3, 1
+	li $t1, WHITE # $t1 stores white
+	jal draw_start_screen # first game screen with instructions
+	j draw_start_screen_loop
+	li $s3, 1
 
 ########## MAIN PROGRAM ##########
 play_game:
@@ -101,9 +103,17 @@ play_game:
 	jal draw_ship
 	jal keypress
 	
-	lw $a0, enemyShipLocation
+	lw $a0, enemyShipLocation1
 	jal draw_enemy_ship
-	sw $v0, enemyShipLocation
+	sw $v0, enemyShipLocation1
+	
+	lw $a0, enemyShipLocation2
+	jal draw_enemy_ship
+	sw $v0, enemyShipLocation2
+	
+	lw $a0, enemyShipLocation3
+	jal draw_enemy_ship
+	sw $v0, enemyShipLocation3
 
 	lw $a0, obstacleAddress1
 	jal draw_obst1
@@ -560,6 +570,21 @@ update_obst2:
 	jr $ra
 
 ########## ENEMY SHIP FUNCTINOS ##########
+random_direction:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42
+	li $a0, 4 # id 4
+	li $a1, 3 # 0 <= int < 3
+	syscall
+	
+	addi $v0, $a0, 0
+	
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+	
 draw_enemy_ship:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
@@ -598,18 +623,65 @@ draw_enemy_ship8:
 	sw $t0, -996($a0)
 	sw $t1, -484($a0)
 	sw $t0, 28($a0)
-	sw $t3, 540($a0) # erase
 draw_enemy_ship9:
 	sw $t0, -992($a0)
 	sw $t0, -480($a0)
 	sw $t0, 32($a0)
 draw_enemy_ship10:
 	sw $t0, -988($a0)
-	sw $t3, -476($a0) # erase
-	sw $t3, 36($a0) # erase
-update_enemy_ship:
-	sw $t3, -984($a0) # erase
+erase:
+	sw $t3, 540($a0)
+	sw $t3, -476($a0)
+	sw $t3, 36($a0)
+	sw $t3, -984($a0)
+
+	sw $t3, -1016($a0)
+	sw $t3, -1012($a0)
+	sw $t3, -1008($a0)
+	sw $t3, -1004($a0)
+	sw $t3, -1000($a0)
+	sw $t3, -476($a0)
+	sw $t3, -1500($a0)
+	sw $t3, -1496($a0)
+	sw $t3, -1504($a0)
+
+	sw $t3, 516($a0)
+	sw $t3, 520($a0)
+	sw $t3, 540($a0)
+	sw $t3, 544($a0)
+	sw $t3, 548($a0)
+	sw $t3, 36($a0)
+	sw $t3, -476($a0)
+	sw $t3, -472($a0)
+	sw $t3, 1040($a0)
+	sw $t3, 1044($a0)
+	sw $t3, 1048($a0)
+	sw $t3, 1052($a0)
+choose_direction:
+	bgt $a0, 0x1000e200, update_enemy_shipUL # check if at the bottom
+	blt $a0, 0x1000847c, update_enemy_shipDL # check if at the top
+	
+	addi $t6, $a0, 0 # save ship location
+	jal random_direction
+	addi $t0, $v0, 0 # get random direction
+	addi $a0, $t6, 0 # restore ship location
+	
+	beqz, $t0, update_enemy_shipL
+	beq $t0, 1, update_enemy_shipUL
+	j update_enemy_shipDL
+
+update_enemy_shipL:
 	addi $v0, $a0, -4 # move to the left
+	j go_back
+
+update_enemy_shipDL:
+	addi $v0, $a0, 508 # move to the down left
+	j go_back
+	
+update_enemy_shipUL:
+	addi $v0, $a0, -516 # move to the up left
+
+go_back:
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
 	jr $ra
