@@ -41,7 +41,7 @@
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
-.eqv 	DELAY		5 # how long before next frame update
+.eqv 	DELAY		10 # how long before next frame update
 
 	# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
@@ -70,6 +70,8 @@
 .eqv 	SHIP_4R 	1548
 .eqv 	SHIP_5L 	2044
 .eqv 	SHIP_5R 	2052
+	# obstacle location
+.eqv 	OBSTACLE_LOC 	0x1000800c
 
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
@@ -83,6 +85,7 @@
 	obstacleNumber: .byte 0 # current # of obstacles on screen
 	obstacleAddress1: .word 0x1000800c
 	obstacleAddress2: .word 0x1000800c
+	obstacleAddress3: .word 0x1000800c
 	obstacleType: .byte 0
 
 .text
@@ -90,33 +93,29 @@
 	#li $t1, WHITE # $t1 stores white
 	#jal draw_start_screen # first game screen with instructions
 	#j draw_start_screen_loop
+	#li $s3, 1
 
 ########## MAIN PROGRAM ##########
-random_location1:
-	lw $s5, obstacleAddress1
-	jal random_obst_address
-	addi $s5, $v0, 0
-
-random_location2:
-	lw $s4, obstacleAddress2
-	jal random_obst_address
-	addi $s4, $v0, 0
-
 play_game:
 	#beq, $s0, 999, game_over # still need to code this
 	jal draw_ship
 	jal keypress
 	
-	#lw $a0, enemyShipLocation
-	#jal draw_enemy_ship
-	
-	move $a0, $s5
+	lw $a0, enemyShipLocation
+	jal draw_enemy_ship
+	sw $v0, enemyShipLocation
+
+	lw $a0, obstacleAddress1
 	jal draw_obst1
-	move $s5, $v0
+	sw $v0, obstacleAddress1
 	
-	move $a0, $s4
+	lw $a0, obstacleAddress2
 	jal draw_obst2
-	move $s4, $v0
+	sw $v0, obstacleAddress2
+	
+	lw $a0, obstacleAddress3
+	jal draw_obst2
+	sw $v0, obstacleAddress3
 
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
@@ -309,6 +308,16 @@ keypress_w:
 	jr $ra
 
 ########## OBSTACLE FUNCTIONS ##########
+random_location1:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	jal random_obst_address
+
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+
 delay_obstacle:
 	li $s3, 1
 	addi $v0, $a0, 0
@@ -325,7 +334,7 @@ random_obst_address:
 
 	sll $a0, $a0, 2 # multiply by 4
 
-	add $v0, $a0, $s5 # return in v0
+	add $v0, $a0, OBSTACLE_LOC # return in v0
 	
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
@@ -468,7 +477,7 @@ draw_obst2: # long meteor
 	# erase topmost pixel
 	sw $t5, -8192($a0)
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x10010200, random_location2
+	bgt, $a0, 0x10010200, random_location1
 	bgt, $a0, 0x10010000, draw_obst2_16
 	bgt, $a0, 0x1000fe00, draw_obst2_15
 	bgt, $a0, 0x1000fc00, draw_obst2_14
@@ -558,6 +567,7 @@ draw_enemy_ship:
 	li $t0, RED
 	li $t1, DARKRED
 	li $t2, LIGHTBLUE
+	li $t3, BLACK
 	
 	# left to right column, top to bottom
 draw_enemy_ship1:
@@ -588,13 +598,18 @@ draw_enemy_ship8:
 	sw $t0, -996($a0)
 	sw $t1, -484($a0)
 	sw $t0, 28($a0)
+	sw $t3, 540($a0) # erase
 draw_enemy_ship9:
 	sw $t0, -992($a0)
 	sw $t0, -480($a0)
 	sw $t0, 32($a0)
 draw_enemy_ship10:
 	sw $t0, -988($a0)
+	sw $t3, -476($a0) # erase
+	sw $t3, 36($a0) # erase
 update_enemy_ship:
+	sw $t3, -984($a0) # erase
+	addi $v0, $a0, -4 # move to the left
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
 	jr $ra
@@ -672,7 +687,7 @@ restart:
 	li $t0, SHIPADDRESS # reset ship location
 	sw $t0, shipAddress
 	jal draw_countdown # countdown
-	j random_location1 # get random location for obstacle
+	j play_game # get random location for obstacle
 
 draw_p2start: # draw "press p to start"
 	addi $sp, $sp, -4 # push to stack
