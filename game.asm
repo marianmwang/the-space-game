@@ -41,7 +41,7 @@
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
-.eqv 	DELAY		30 # how long before next frame update
+.eqv 	DELAY		5 # how long before next frame update
 
 	# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
@@ -58,6 +58,10 @@
 .eqv 	BLACK 		0x000000
 	# enemy ship colours
 .eqv 	DARKRED 	0xb71c1c
+	# star colours
+.eqv 	DARKPURPLE	0x35284d
+.eqv 	PURPLE		0x5e35b1
+.eqv	LIGHTPURPLE	0xb39ddb
 	# ship dimensions
 .eqv 	SHIPADDRESS 0x1000ba10 # for restarting
 .eqv	SHIP_1L 	0 # offset from SHIPADDRESS
@@ -72,23 +76,36 @@
 .eqv 	SHIP_5R 	2052
 	# obstacle location
 .eqv 	OBSTACLE_LOC 	0x1000800c
+.eqv 	OBSTACLESPEED1 	7
+.eqv 	OBSTACLESPEED2 	3
+	# enemy ship speed
+.eqv 	ENEMYSHIPSPEED	12
+	# stars speed
+.eqv 	STARSPEED1 	10
+.eqv 	STARSPEED2	30
 
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
-	
-	test: .word 0x100080f0
 	
 	# ENEMY SHIPS
 	enemyShipLocation1: .word 0x1000bba0
 	enemyShipLocation2: .word 0x100088a0
 	enemyShipLocation3: .word 0x1000accc
+	enemyShipSpeed: .byte 0
 	
 	# OBSTACLES
-	obstacleNumber: .byte 0 # current # of obstacles on screen
 	obstacleAddress1: .word 0x1000800c
 	obstacleAddress2: .word 0x1000800c
 	obstacleAddress3: .word 0x1000800c
-	obstacleType: .byte 0
+	
+	obstacleSpeed1: .byte 0
+	obstacleSpeed2: .byte 0
+	
+	# STARS
+	starAddress1: .word 0x10008ccc
+	starAddress2: .word 0x10009000
+	starSpeed1: .byte 0
+	starSpeed2: .byte 0
 
 .text
 ########## WELCOME ##########
@@ -125,7 +142,7 @@ play_game:
 	lw $a0, obstacleAddress3
 	jal draw_obst2
 	sw $v0, obstacleAddress3
-
+	
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
 	j play_game
@@ -327,9 +344,18 @@ random_location1:
 	addi $sp, $sp, 4
 	jr $ra
 
-delay_obstacle:
-	li $s3, 1
-	addi $v0, $a0, 0
+delay_obstacle1:
+	lb $t8, obstacleSpeed1
+	addi $t8, $t8, -1
+	sb $t8, obstacleSpeed1
+	addi $v0, $a0, 0 # don't change obst location
+	jr $ra
+	
+delay_obstacle2:
+	lb $t8, obstacleSpeed2
+	addi $t8, $t8, -1
+	sb $t8, obstacleSpeed2
+	addi $v0, $a0, 0 # don't change obst location
 	jr $ra
 
 random_obst_address: 
@@ -377,11 +403,13 @@ random_obst_type:
 	jr $ra
 
 draw_obst1: # fat and slow meteor
+	lb $t8, obstacleSpeed1
+	bgtz $t8, delay_obstacle1 # don't update the address this time around
+	li $t8, OBSTACLESPEED1
+	sb $t8, obstacleSpeed1
+
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
-
-	beqz $s3, delay_obstacle # don't update the address this time around
-	li $s3, 0
 	# a0 is current obstacle address argument
 	li $t0, RED
 	li $t1, YELLOW
@@ -475,6 +503,11 @@ update_obst1:
 	jr $ra
 
 draw_obst2: # long meteor
+	lb $t8, obstacleSpeed2
+	bgtz $t8, delay_obstacle2 # don't update the address this time around
+	li $t8, OBSTACLESPEED2
+	sb $t8, obstacleSpeed2
+
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	# a0 is obstacle address
@@ -569,6 +602,13 @@ update_obst2:
 	jr $ra
 
 ########## ENEMY SHIP FUNCTINOS ##########
+delay_enemy_ship:
+	lb $t8, enemyShipSpeed
+	addi $t8, $t8, -1
+	sb $t8, enemyShipSpeed
+	addi $v0, $a0, 0 # don't change ship location
+	jr $ra
+
 random_direction:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
@@ -585,6 +625,11 @@ random_direction:
 	jr $ra
 	
 draw_enemy_ship:
+	lb $t8, enemyShipSpeed
+	bgtz $t8, delay_enemy_ship # don't update the address this time around
+	li $t8, ENEMYSHIPSPEED
+	sb $t8, enemyShipSpeed
+
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 
@@ -657,7 +702,7 @@ erase:
 	sw $t3, 1048($a0)
 	sw $t3, 1052($a0)
 choose_direction:
-	bgt $a0, 0x1000e400, update_enemy_shipUL # check if at the bottom
+	bgt $a0, 0x1000e000, update_enemy_shipUL # check if at the bottom
 	blt $a0, 0x10008477, update_enemy_shipDL # check if at the top
 	
 	addi $t6, $a0, 0 # save ship location
@@ -681,6 +726,117 @@ update_enemy_shipUL:
 	addi $v0, $a0, -516 # move to the up left
 
 go_back:
+	lw $ra, 0($sp) # pop from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+########## STAR BACKGROUND ##########
+random_star_address:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42
+	li $a0, 5 # id 5
+	li $a1, 50 # 0 <= int < 50
+	syscall
+	
+	sll $a0, $a0, 9 # a0 * 512
+	addi $a0, $a0, DISPLAYADDRESS
+	addi $v0, $a0, 0 # return in v0
+	
+	lw $ra, 0($sp) # pop ra from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+delay_star1:
+	lb $t0, starSpeed1
+	addi $t0, $t0, -1
+	sb $t0, starSpeed1
+	addi $v0, $a0, 0 # don't change star location
+	jr $ra
+	
+delay_star2:
+	lb $t0, starSpeed2
+	addi $t0, $t0, -1
+	sb $t0, starSpeed2
+	addi $v0, $a0, 0 # don't change star location
+	jr $ra
+	
+move_big_star:
+	lb $t0, starSpeed1
+	bgtz, $t0, delay_star1
+	li $t0, STARSPEED1
+	sb $t0, starSpeed1
+	
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $t0, DARKPURPLE
+	li $t1, PURPLE
+	li $t2, LIGHTPURPLE
+	li $t3, BLACK
+	
+	addi $t4, $a0, 0 # save star address
+	
+	li $t5, 512
+	subi $a0, $a0, DISPLAYADDRESS
+	div $a0, $t5
+	mfhi $t5
+	beqz $t5, random_star_address
+	beq $t5, 508, move_big_star2
+	beq $t5, 504, move_big_star3
+	beq $t5, 500, move_big_star4
+	beq $t5, 496, move_big_star5
+	
+move_big_star1:
+	addi $a0, $t4, 0 # restore star address
+	sw $t0, 0($a0)
+move_big_star2:
+	addi $a0, $t4, 0 # restore star address
+	sw $t1, 4($a0)
+move_big_star3:
+	addi $a0, $t4, 0 # restore star address
+	sw $t2, 8($a0)
+	sw $t1, 520($a0)
+	sw $t0, 1032($a0)
+	sw $t1, -504($a0)
+	sw $t1, -1016($a0)
+move_big_star4:
+	addi $a0, $t4, 0 # restore star address
+	sw $t1, 12($a0)
+move_big_star5:
+	addi $a0, $t4, 0 # restore star address
+	sw $t0, 16($a0)
+erase_big_star:
+	sw $t3, -500($a0)
+	sw $t3, -1012($a0)
+	sw $t3, 524($a0)
+	sw $t3, 1036($a0)
+	sw $t3, 20($a0)
+	
+	addi $v0, $a0, -4 # update address
+	
+	lw $ra, 0($sp) # pop from stack
+	addi $sp, $sp, 4
+	jr $ra
+
+move_small_star:
+	lb $t0, starSpeed2
+	bgtz, $t0, delay_star2
+	li $t0, STARSPEED2
+	sb $t0, starSpeed2
+
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+
+	li $t0, DARKPURPLE
+	li $t1, BLACK
+	
+	sw $t0, 0($a0)
+	sw $t1, 4($a0)
+	
+	addi $v0, $a0, -4 # update address
+	
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
 	jr $ra
