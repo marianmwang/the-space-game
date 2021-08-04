@@ -16,20 +16,19 @@
 #
 # Which milestones have beenreached in this submission?
 # (See the assignment handout for descriptions of the milestones)
-# -Milestone 1/2/3 (choose the one that applies)
+# -Milestone 1
 #
 # Which approved features have been implemented for milestone 3?
 # (See the assignment handout for the list of additional features)
-# 1. (fill in the feature, if any)
-# 2. (fill in the feature, if any)
-# 3. (fill in the feature, if any)
-# ... (add more if necessary)
+# 1. Pick-ups
+# 2. Score System
+# 3. Enemy Ships
 #
 # Link to video demonstration for final submission:
 # -(insert YouTube / MyMedia / other URL here). Make sure we can view it!
 #
 # Are you OK with us sharing the video with people outside course staff?
-# -yes / no/ yes, and please share this project github link as well!
+# -yes, and please share this project github link as well!
 #
 # Any additional information that the TA needs to know:# -(write here, if any)
 #
@@ -38,6 +37,7 @@
 ########## CONSTANTS ##########
 	#  addresses
 .eqv	DISPLAYADDRESS 	0x10008000
+.eqv	RIGHTCORNER	0x1000fffc
 .eqv	DISPPTOSTART	268482676
 
 .eqv 	KEYSTROKE 	0xffff0000
@@ -92,10 +92,9 @@
 
 .text
 ########## WELCOME ##########
-	#li $t1, WHITE # $t1 stores white
-	#jal draw_start_screen # first game screen with instructions
-	#j draw_start_screen_loop
-	#li $s3, 1
+	li $t1, WHITE # $t1 stores white
+	jal draw_start_screen # first game screen with instructions
+	j draw_start_screen_loop
 
 ########## MAIN PROGRAM ##########
 play_game:
@@ -754,12 +753,24 @@ restart:
 	lw $t7, 4($t9) # t7 = keypress ascii code
 	bne $t7, 0x70, draw_start_screen_loop # if they don't press p, keep flickering
 	li $t1, BLACK
-	jal draw_start_screen # erase "welcome to... WASD"
-	jal draw_p2start # erase "press p to start"
+	li $t0, DISPLAYADDRESS
+	jal erase_screen # erase the whole screen
 	li $t0, SHIPADDRESS # reset ship location
 	sw $t0, shipAddress
 	jal draw_countdown # countdown
 	j play_game # get random location for obstacle
+
+erase_screen:
+	addi $sp, $sp, -4 # push to stack
+	sw $ra, 0($sp)
+
+	sw $t1, 0($t0)
+	addi $t0, $t0, 4
+	ble $t0, RIGHTCORNER, erase_screen
+	
+	lw $ra, 0($sp) # pop from stack
+	addi $sp, $sp, 4
+	jr $ra
 
 draw_p2start: # draw "press p to start"
 	addi $sp, $sp, -4 # push to stack
