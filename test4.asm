@@ -2,11 +2,14 @@
 	#  addresses
 .eqv	DISPLAYADDRESS 	0x10008000
 
-.eqv 	DELAY		1 # how long before next frame update
+.eqv 	DELAY		10 # how long before next frame update
 
 .eqv	YELLOW		0xffc107
 .eqv 	BLACK 		0x000000
+.eqv 	SCORESPEED 	50
 
+.data
+	scoreSpeed: .byte 0
 .text
 	li $s0, 0
 	li $s1, 0
@@ -52,6 +55,12 @@ draw_board:
 	jr $ra # go back to play_game, stackPush is in draw_countdown
 
 # drawing letters and numbers functions
+no_update:
+	lb $t0, scoreSpeed
+	addi $t0, $t0, -1
+	sb $t0, scoreSpeed
+	jr $ra
+	
 draw_zero:
 	sw $t4, 0($t0)
 	sw $t4, 4($t0)
@@ -67,6 +76,11 @@ draw_zero:
 	sw $t4, 2056($t0)
 	jr $ra
 point_counter_ones:
+	lb $t0, scoreSpeed
+	bgtz $t0, no_update
+	li $t0, SCORESPEED
+	sb $t0, scoreSpeed
+	
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
 	
