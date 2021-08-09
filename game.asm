@@ -44,38 +44,41 @@
 .eqv 	KEYSTROKE 	0xffff0000
 .eqv 	DELAY		5 # how long before next frame update
 
-	# ship colours
+# ship colours
 .eqv	LIGHTBLUE	0xbbdefb
 .eqv	BLUE		0x3f51b5
 .eqv	RED 		0xf44336
 .eqv	YELLOW		0xffc107
-	# obstacle colours
+# obstacle colours
+.eqv 	xRED		0xf54336
+.eqv 	xYELLOW 	0xfec107
 .eqv	DBROWN 		0x5d4037
 .eqv 	LBROWN		0x795548
-	# screen colours
+# screen colours
 .eqv 	WHITE 		0xffffff
 .eqv 	PINK 		0xff8b80
 .eqv 	GREY 		0x607d8b
 .eqv 	BLACK 		0x000000
-	# enemy ship colours
+# enemy ship colours
+.eqv 	xLIGHTBLUE 	0xbcdefb
 .eqv 	DARKRED 	0xb71c1c
-	# star colours
+# star colours
 .eqv 	DARKPURPLE	0x35284d
 .eqv 	PURPLE		0x5e35b1
 .eqv	LIGHTPURPLE	0xb39ddb
-	# ship dimensions
+# ship dimensions
 .eqv 	SHIPADDRESS 0x1000ba10 # for restarting
 .eqv	SHIP_1L 	0 # offset from SHIPADDRESS
-.eqv 	SHIP_1R 	8
-.eqv 	SHIP_2L 	508
-.eqv 	SHIP_2R 	532
-.eqv 	SHIP_3L		1020
-.eqv 	SHIP_3R 	1052
-.eqv 	SHIP_4L 	1536
-.eqv 	SHIP_4R 	1548
-.eqv 	SHIP_5L 	2044
+.eqv 	SHIP_1R 	8 # 8
+.eqv 	SHIP_2L 	508 # 500
+.eqv 	SHIP_2R 	532 # 24
+.eqv 	SHIP_3L		1020 # 488
+.eqv 	SHIP_3R 	1052 # 32
+.eqv 	SHIP_4L 	1536 # 484
+.eqv 	SHIP_4R 	1548 # 12
+.eqv 	SHIP_5L 	2044 # 496
 .eqv 	SHIP_5R 	2052
-	# obstacle location
+# obstacle location
 .eqv 	OBSTACLE_LOC 	0x1000800c
 .eqv 	OBSTACLESPEED1 	10
 .eqv 	OBSTACLESPEED2 	8
@@ -83,20 +86,31 @@
 .eqv 	OBSTACLESPEED4 	4
 .eqv 	OBSTACLESPEED5 	3
 .eqv 	OBSTACLESPEED6 	2
-	# enemy ship speed
+# enemy ship speed
 .eqv 	ENEMYSHIPSPEED1	12
 .eqv 	ENEMYSHIPSPEED2	9
 .eqv 	ENEMYSHIPSPEED3	6
-	# stars speed
+# stars speed
 .eqv 	STARSPEED1 	10
 .eqv 	STARSPEED2	30
-	# score counter locations
+# score counter locations
 .eqv 	ONES 			0x1000F3EC
 .eqv 	TENS 			0x1000F3DC
 .eqv 	HUNDREDS 		0x1000F3CC
 .eqv 	THOUSANDS 		0x1000F3BC
 .eqv 	TENTHOUSANDS 		0x1000F3AC
 .eqv 	SCORESPEED		40
+# heart locations
+.eqv 	HEART1	0x1000F408
+.eqv 	HEART2 	0x1000F420
+.eqv 	HEART3  0x1000F438
+.eqv 	HEART4 	0x1000F450
+.eqv 	HEART5 	0x1000F468
+# collisions speed
+.eqv 	CHECKSPEED 50
+
+# game over location
+.eqv 	GAME_OVER 		0x1000AAAC
 
 .data
 	shipAddress: .word 0x1000ba10 # starting address for SHIP_1L, 14864 + 0x10008000
@@ -109,8 +123,8 @@
 	
 	# OBSTACLES
 	obstacleAddress1: .word 0x1000800c
-	obstacleAddress2: .word 0x1000800c
-	obstacleAddress3: .word 0x1000800c
+	obstacleAddress2: .word 0x1000808c
+	obstacleAddress3: .word 0x100080fc
 	
 	obstacleSpeed1: .byte 0
 	obstacleSpeed2: .byte 0
@@ -128,6 +142,10 @@
 	scoreThousands: 	.byte 0
 	scoreTenThousands:	.byte 0
 	scoreSpeed: 		.byte 0
+	
+	# LIVES
+	lives: 			.byte 5
+	checkSpeed: 	.byte 0
 
 .text
 ########## WELCOME ##########
@@ -137,7 +155,6 @@
 
 ########## MAIN PROGRAM ##########
 play_game:
-	#beq, $s0, 999, game_over # still need to code this
 	jal draw_ship
 	jal keypress
 	
@@ -164,6 +181,9 @@ play_game:
 	lw $a0, obstacleAddress3
 	jal draw_obst2_loading
 	sw $v0, obstacleAddress3
+	
+	jal check_player 
+	#jal check_enemy
 	
 	jal point_counter_ones
 	jal point_counter_tens
@@ -453,8 +473,8 @@ draw_obst1:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	# a0 is current obstacle address argument
-	li $t0, RED
-	li $t1, YELLOW
+	li $t0, xRED
+	li $t1, xYELLOW
 	li $t3, DBROWN
 	li $t4, LBROWN
 	li $t5, BLACK
@@ -567,8 +587,8 @@ draw_obst2:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	# a0 is obstacle address
-	li $t0, RED
-	li $t1, YELLOW
+	li $t0, xRED
+	li $t1, xYELLOW
 	li $t3, DBROWN
 	li $t4, LBROWN
 	li $t5, BLACK
@@ -703,9 +723,9 @@ draw_enemy_ship:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 
-	li $t0, RED
+	li $t0, xRED
 	li $t1, DARKRED
-	li $t2, LIGHTBLUE
+	li $t2, xLIGHTBLUE
 	li $t3, BLACK
 	
 	# left to right column, top to bottom
@@ -799,6 +819,115 @@ go_back:
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
 	jr $ra
+
+########## COLLISIONS ##########
+delay_check_player:
+	lb $t0, checkSpeed
+	addi $t0, $t0, -1
+	sb $t0, checkSpeed
+	jr $ra
+
+check_player:
+	lb $t0, checkSpeed
+	bgtz $t0, delay_check_player
+	li $t0, CHECKSPEED
+	sb $t0, checkSpeed	
+
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+
+	lw $t0, shipAddress # get current ship address
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 500
+	jal check_overlaps
+	addi $t0, $t0, 16
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 484
+	jal check_overlaps
+	addi $t0, $t0, 20
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 484
+	jal check_overlaps
+	addi $t0, $t0, 8
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 496
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps
+	addi $t0, $t0, 4
+	jal check_overlaps # check all the outside edges of ship
+
+	j go_back # if no overlaps, go back
+
+check_overlaps:
+	lw $t1, 0($t0)
+	beq $t1, xLIGHTBLUE, lose_life
+	beq $t1, xRED, lose_life
+	beq $t1, xYELLOW, lose_life
+	beq $t1, DARKRED, lose_life
+	beq $t1, LBROWN, lose_life
+	beq $t1, DBROWN, lose_life
+
+	jr $ra
+
+lose_life:
+	lb $t4, lives
+	addi $t4, $t4, -1
+
+	li $t2, BLACK
+	li $t3, BLACK
+	
+	beq $t4, 4, heart4
+	beq $t4, 3, heart3
+	beq $t4, 2, heart2
+	beq $t4, 1, heart1
+	beqz $t4, heart0
+
+heart4:
+	li $t0, HEART5
+	jal draw_heart
+	sb $t4, lives
+	j go_back
+
+heart3:
+	li $t0, HEART4
+	jal draw_heart
+	sb $t4, lives
+	j go_back
+
+heart2:
+	li $t0, HEART3
+	jal draw_heart
+	sb $t4, lives
+	j go_back
+
+heart1:
+	li $t0, HEART2
+	jal draw_heart
+	sb $t4, lives
+	j go_back
+
+heart0:
+	li $t0, HEART1
+	jal draw_heart
+	sb $t0, lives
+	j draw_game_over
 
 ########## STAR BACKGROUND ##########
 random_star_address:
@@ -1167,16 +1296,15 @@ draw_board:
 	# draw hearts
 	li $t2, PINK
 	li $t3, RED
-	li $t0, DISPLAYADDRESS
-	addi $t0, $t0, 29704
+	li $t0, HEART1
 	jal draw_heart
-	addi $t0, $t0, 24
+	li $t0, HEART2
 	jal draw_heart
-	addi $t0, $t0, 24
+	li $t0, HEART3
 	jal draw_heart
-	addi $t0, $t0, 24
+	li $t0, HEART4
 	jal draw_heart
-	addi $t0, $t0, 24
+	li $t0, HEART5
 	jal draw_heart
 	# draw points (00000)
 	li $t4, YELLOW
@@ -1732,6 +1860,20 @@ draw_Y:
 	addi $t0, $t0, 20
 	jr $ra
 
+draw_G:
+	sw $t1, 4($t0)
+	sw $t1, 8($t0)
+	sw $t1, 512($t0)
+	sw $t1, 1024($t0)
+	sw $t1, 1536($t0)
+	sw $t1, 2052($t0)
+	sw $t1, 2056($t0)
+	sw $t1, 1548($t0)
+	sw $t1, 1036($t0)
+	sw $t1, 1032($t0)
+	addi $t0, $t0, 20
+	jr $ra
+
 draw_dash:
 	sw $t1, 1024($t0)
 	sw $t1, 1028($t0)
@@ -2205,6 +2347,19 @@ draw_two:
 	sw $t1, 9272($t0)
 	jr $ra
 
+draw_V:
+	sw $t1, 0($t0)
+	sw $t1, 512($t0)
+	sw $t1, 1028($t0)
+	sw $t1, 1540($t0)
+	sw $t1, 2056($t0)
+	sw $t1, 1036($t0)
+	sw $t1, 1548($t0)
+	sw $t1, 16($t0)
+	sw $t1, 528($t0)
+	addi $t0, $t0, 24
+	jr $ra
+
 draw_one:
 	sw $t1, 2048($t0)
 	sw $t1, 2052($t0)
@@ -2338,6 +2493,20 @@ draw_one:
 	sw $t1, 9264($t0)
 	sw $t1, 9268($t0)
 	jr $ra
+
+draw_game_over:
+	li $t0, GAME_OVER
+	li $t1, WHITE
+	jal draw_G
+	jal draw_A
+	jal draw_M
+	jal draw_E
+	addi $t0, $t0, 8
+	jal draw_O
+	jal draw_V
+	jal draw_E
+	jal draw_R
+	j exit
 
 exit:
 	li $v0, 10 # terminate the program gracefully
