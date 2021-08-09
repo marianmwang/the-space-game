@@ -35,7 +35,7 @@
 #####################################################################
 
 ########## CONSTANTS ##########
-	#  addresses
+#  addresses
 .eqv	DISPLAYADDRESS 	0x10008000
 .eqv	RIGHTCORNER	0x1000fffc
 .eqv	DISPPTOSTART	268482676
@@ -107,7 +107,7 @@
 .eqv 	HEART4 	0x1000F450
 .eqv 	HEART5 	0x1000F468
 # collisions speed
-.eqv 	CHECKSPEED 50
+.eqv 	CHECKSPEED 100
 
 # game over location
 .eqv 	GAME_OVER 		0x1000AAAC
@@ -149,6 +149,10 @@
 
 .text
 ########## WELCOME ##########
+welcome:
+	li $t1, BLACK
+	li $t0, DISPLAYADDRESS
+	jal erase_screen
 	li $t1, WHITE # $t1 stores white
 	jal draw_start_screen # first game screen with instructions
 	j draw_level_choice_loop
@@ -260,7 +264,7 @@ keypress_happened:
 	beq $t7, 0x64, keypress_d
 	beq $t7, 0x73, keypress_s
 	beq $t7, 0x77, keypress_w
-	beq $t7, 0x70, restart # if they press p, go back to countdown, just exits right now
+	beq $t7, 0x70, welcome # if they press p, go back to countdown, just exits right now
 
 no_response: 
 	jr $ra
@@ -830,8 +834,6 @@ delay_check_player:
 check_player:
 	lb $t0, checkSpeed
 	bgtz $t0, delay_check_player
-	li $t0, CHECKSPEED
-	sb $t0, checkSpeed	
 
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
@@ -887,6 +889,9 @@ check_overlaps:
 	jr $ra
 
 lose_life:
+	li $t9, CHECKSPEED # after you lose a life, then reset the check speed
+	sb $t9, checkSpeed
+
 	lb $t4, lives
 	addi $t4, $t4, -1
 
@@ -1142,13 +1147,23 @@ draw_start_screen_loop:
 restart:
 	lw $t7, 4($t9) # t7 = keypress ascii code
 	bne $t7, 0x70, draw_start_screen_loop # if they don't press p, keep flickering
+
 	li $t1, BLACK
 	li $t0, DISPLAYADDRESS
-	jal erase_screen # erase the whole screen
+	jal erase_screen # reset the whole screen
+
 	li $t0, SHIPADDRESS # reset ship location
 	sw $t0, shipAddress
+
 	li $t0, 5 # reset lives
 	sb $t0, lives
+
+	li $s1, 0 # reset scores
+	li $s2, 0
+	li $s3, 0
+	li $s4, 0
+	li $s5, 0
+
 	jal draw_countdown # countdown
 	j play_game # get random location for obstacle
 
@@ -2508,7 +2523,18 @@ draw_game_over:
 	jal draw_V
 	jal draw_E
 	jal draw_R
-	j exit
+
+game_over_check:
+	# check kb input
+	li $t9, 0xffff0000 # t9 = 1 if keypress
+	lw $t8, 0($t9) 
+	beq $t8, 1, game_over_check2 # if key was pressed, check to go back to welcome
+	j game_over_check
+
+game_over_check2:
+	lw $t7, 4($t9) # t7 = keypress ascii code
+	bne $t7, 0x70, game_over_check # if they don't press p, keep flickering
+	j welcome
 
 exit:
 	li $v0, 10 # terminate the program gracefully
