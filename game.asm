@@ -39,6 +39,7 @@
 .eqv	DISPLAYADDRESS 	0x10008000
 .eqv	RIGHTCORNER	0x1000fffc
 .eqv	DISPPTOSTART	268482676
+.eqv	DISPPTOSTART2	268482612
 
 .eqv 	KEYSTROKE 	0xffff0000
 .eqv 	DELAY		5 # how long before next frame update
@@ -76,10 +77,16 @@
 .eqv 	SHIP_5R 	2052
 	# obstacle location
 .eqv 	OBSTACLE_LOC 	0x1000800c
-.eqv 	OBSTACLESPEED1 	7
-.eqv 	OBSTACLESPEED2 	3
+.eqv 	OBSTACLESPEED1 	10
+.eqv 	OBSTACLESPEED2 	8
+.eqv 	OBSTACLESPEED3 	7
+.eqv 	OBSTACLESPEED4 	4
+.eqv 	OBSTACLESPEED5 	3
+.eqv 	OBSTACLESPEED6 	2
 	# enemy ship speed
-.eqv 	ENEMYSHIPSPEED	12
+.eqv 	ENEMYSHIPSPEED1	12
+.eqv 	ENEMYSHIPSPEED2	9
+.eqv 	ENEMYSHIPSPEED3	6
 	# stars speed
 .eqv 	STARSPEED1 	10
 .eqv 	STARSPEED2	30
@@ -111,7 +118,7 @@
 ########## WELCOME ##########
 	li $t1, WHITE # $t1 stores white
 	jal draw_start_screen # first game screen with instructions
-	j draw_start_screen_loop
+	j draw_level_choice_loop
 
 ########## MAIN PROGRAM ##########
 play_game:
@@ -120,27 +127,27 @@ play_game:
 	jal keypress
 	
 	lw $a0, enemyShipLocation1
-	jal draw_enemy_ship
+	jal draw_enemy_ship_loading
 	sw $v0, enemyShipLocation1
 	
 	lw $a0, enemyShipLocation2
-	jal draw_enemy_ship
+	jal draw_enemy_ship_loading
 	sw $v0, enemyShipLocation2
 	
 	lw $a0, enemyShipLocation3
-	jal draw_enemy_ship
+	jal draw_enemy_ship_loading
 	sw $v0, enemyShipLocation3
 
 	lw $a0, obstacleAddress1
-	jal draw_obst1
+	jal draw_obst1_loading
 	sw $v0, obstacleAddress1
 	
 	lw $a0, obstacleAddress2
-	jal draw_obst2
+	jal draw_obst2_loading
 	sw $v0, obstacleAddress2
 	
 	lw $a0, obstacleAddress3
-	jal draw_obst2
+	jal draw_obst2_loading
 	sw $v0, obstacleAddress3
 	
 	li $a0, DELAY # wait this many ms before updating
@@ -402,10 +409,24 @@ random_obst_type:
 	addi $sp, $sp, 4
 	jr $ra
 
-draw_obst1: # fat and slow meteor
+draw_obst1_loading: # fat and slow meteor
 	lb $t8, obstacleSpeed1
 	bgtz $t8, delay_obstacle1 # don't update the address this time around
+	beq $s0, 1, loading1
+	beq $s0, 2, loading3
+
+loading5:
+	li $t8, OBSTACLESPEED5
+	j draw_obst1
+
+loading3:
+	li $t8, OBSTACLESPEED3
+	j draw_obst1
+
+loading1:
 	li $t8, OBSTACLESPEED1
+
+draw_obst1:
 	sb $t8, obstacleSpeed1
 
 	addi $sp, $sp, -4 # push ra to stack
@@ -502,10 +523,24 @@ update_obst1:
 	addi $sp, $sp, 4
 	jr $ra
 
-draw_obst2: # long meteor
+draw_obst2_loading: # long meteor
 	lb $t8, obstacleSpeed2
 	bgtz $t8, delay_obstacle2 # don't update the address this time around
+	beq $s0, 1, loading2
+	beq $s0, 2, loading4
+
+loading6:
+	li $t8, OBSTACLESPEED6
+	j draw_obst2
+
+loading4:
+	li $t8, OBSTACLESPEED4
+	j draw_obst2
+
+loading2:
 	li $t8, OBSTACLESPEED2
+
+draw_obst2:
 	sb $t8, obstacleSpeed2
 
 	addi $sp, $sp, -4 # push ra to stack
@@ -624,10 +659,24 @@ random_direction:
 	addi $sp, $sp, 4
 	jr $ra
 	
-draw_enemy_ship:
+draw_enemy_ship_loading:
 	lb $t8, enemyShipSpeed
 	bgtz $t8, delay_enemy_ship # don't update the address this time around
-	li $t8, ENEMYSHIPSPEED
+	beq $s0, 1, ship_loading1
+	beq $s0, 2, ship_loading2
+
+ship_loading3:
+	li $t8, ENEMYSHIPSPEED3
+	j draw_enemy_ship
+
+ship_loading2:
+	li $t8, ENEMYSHIPSPEED2
+	j draw_enemy_ship
+
+ship_loading1:
+	li $t8, ENEMYSHIPSPEED1
+
+draw_enemy_ship:
 	sb $t8, enemyShipSpeed
 
 	addi $sp, $sp, -4 # push ra to stack
@@ -840,7 +889,6 @@ move_small_star:
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
 	jr $ra
-
 ########## SCREEN FUNCTIONS ##########
 draw_start_screen:
 	addi $sp, $sp, -4 # push ra to stack
@@ -887,6 +935,41 @@ draw_start_screen:
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
 	jr $ra
+
+draw_level_choice_loop:
+	li $t1, WHITE # draw p to start in white
+	jal draw_level
+	li $a0, 300 # delay
+	li $v0, 32
+	syscall
+	li $t1, BLACK # draw p to start in black
+	jal draw_level
+	li $a0, 100 # delay
+	li $v0, 32
+	syscall
+	# check kb input
+	li $t9, 0xffff0000 # t9 = 1 if keypress
+	lw $t8, 0($t9) 
+	beq $t8, 1, level_choice_e # if key was pressed, check which level they choose
+	j draw_level_choice_loop
+
+level_choice_e:
+	lw $t7, 4($t9) # t7 = keypress ascii code
+	bne $t7, 0x65, level_choice_n # if they don't press e, jump to check if they press n
+	li $s0, 1
+	j draw_start_screen_loop
+	
+level_choice_n:
+	lw $t7, 4($t9) # t7 = keypress ascii code
+	bne $t7, 0x6e, level_choice_h # if they don't press e, jump to check if they press h
+	li $s0, 2
+	j draw_start_screen_loop
+
+level_choice_h:
+	lw $t7, 4($t9) # t7 = keypress ascii code
+	bne $t7, 0x68, draw_level_choice_loop # if they don't press h, jump back to level_choice_loop
+	li $s0, 3
+	j draw_start_screen_loop
 
 draw_start_screen_loop:
 	li $t1, WHITE # draw p to start in white
@@ -949,6 +1032,38 @@ draw_p2start: # draw "press p to start"
 	jal draw_A
 	jal draw_R
 	jal draw_T
+	
+	lw $ra, 0($sp) # pop from stack
+	addi $sp, $sp, 4
+	jr $ra 
+
+draw_level: # draw "press e - easy, n - normal, h - hard "
+	addi $sp, $sp, -4 # push to stack
+	sw $ra, 0($sp)
+
+	li $t0, DISPPTOSTART2
+	jal draw_E
+	jal draw_dash
+	jal draw_E
+	jal draw_A
+	jal draw_S
+	jal draw_Y
+	addi $t0, $t0, 8
+	jal draw_N
+	jal draw_dash
+	jal draw_N
+	jal draw_O
+	jal draw_R
+	jal draw_M
+	jal draw_A
+	jal draw_L
+	addi $t0, $t0, 8
+	jal draw_H
+	jal draw_dash
+	jal draw_H
+	jal draw_A
+	jal draw_R
+	jal draw_D
 	
 	lw $ra, 0($sp) # pop from stack
 	addi $sp, $sp, 4
@@ -1333,6 +1448,24 @@ draw_D:
 	addi $t0, $t0, 20
 	jr $ra
 
+draw_Y:
+	sw $t1, 0($t0)
+	sw $t1, 16($t0)
+	sw $t1, 516($t0)
+	sw $t1, 524($t0)
+	sw $t1, 1032($t0)
+	sw $t1, 1544($t0)
+	sw $t1, 2056($t0)
+	addi $t0, $t0, 20
+	jr $ra
+
+draw_dash:
+	sw $t1, 1024($t0)
+	sw $t1, 1028($t0)
+	sw $t1, 1032($t0)
+	addi $t0, $t0, 16
+	jr $ra
+
 draw_arrow_left:
 	sw $t1, 8($t0)
 	sw $t1, 516($t0)
@@ -1346,6 +1479,23 @@ draw_arrow_left:
 	sw $t1, 1544($t0)
 	sw $t1, 2056($t0)
 	addi $t0, $t0, 24
+	jr $ra
+
+draw_N:
+	sw $t1, 0($t0)
+	sw $t1, 512($t0)
+	sw $t1, 1024($t0)
+	sw $t1, 1536($t0)
+	sw $t1, 2048($t0)
+	sw $t1, 12($t0)
+	sw $t1, 524($t0)
+	sw $t1, 1036($t0)
+	sw $t1, 1548($t0)
+	sw $t1, 2060($t0)
+	sw $t1, 516($t0)
+	sw $t1, 1032($t0)
+	sw $t1, 1544($t0)
+	addi $t0, $t0, 20
 	jr $ra
 
 draw_arrow_right:
