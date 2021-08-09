@@ -1147,6 +1147,8 @@ restart:
 	jal erase_screen # erase the whole screen
 	li $t0, SHIPADDRESS # reset ship location
 	sw $t0, shipAddress
+	li $t0, 5 # reset lives
+	sb $t0, lives
 	jal draw_countdown # countdown
 	j play_game # get random location for obstacle
 
