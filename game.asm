@@ -66,6 +66,9 @@
 .eqv 	DARKPURPLE	0x35284d
 .eqv 	PURPLE		0x5e35b1
 .eqv	LIGHTPURPLE	0xb39ddb
+# pick-up colours
+.eqv 	xLIGHTGREEN 0xb2ff59
+.eqv 	xGREEN		0x388e3c
 # ship dimensions
 .eqv 	SHIPADDRESS 0x1000ba10 # for restarting
 .eqv	SHIP_1L 	0 # offset from SHIPADDRESS
@@ -99,7 +102,7 @@
 .eqv 	HUNDREDS 		0x1000F3CC
 .eqv 	THOUSANDS 		0x1000F3BC
 .eqv 	TENTHOUSANDS 		0x1000F3AC
-.eqv 	SCORESPEED		40
+.eqv 	SCORESPEED		10
 # heart locations
 .eqv 	HEART1	0x1000F408
 .eqv 	HEART2 	0x1000F420
@@ -108,6 +111,8 @@
 .eqv 	HEART5 	0x1000F468
 # collisions speed
 .eqv 	CHECKSPEED 100
+# pick up speed
+.eqv 	PICKUPSPEED 2000	
 
 # game over location
 .eqv 	GAME_OVER 		0x1000AAAC
@@ -136,16 +141,16 @@
 	starSpeed2: .byte 0
 
 	# SCORE
-	scoreOnes:  		.byte 0
-	scoreTens: 		.byte 0
-	scoreHundreds: 		.byte 0
-	scoreThousands: 	.byte 0
-	scoreTenThousands:	.byte 0
+	# score is stored in $s4 $s3 $s2 $s1 $ s5
 	scoreSpeed: 		.byte 0
 	
 	# LIVES
 	lives: 			.byte 5
 	checkSpeed: 	.byte 0
+
+	# PICKUPS
+	pickupSpeed: 	.half 0
+	heartPickup: 	.word 0
 
 .text
 ########## WELCOME ##########
@@ -185,6 +190,8 @@ play_game:
 	lw $a0, obstacleAddress3
 	jal draw_obst2_loading
 	sw $v0, obstacleAddress3
+
+	jal draw_pickup
 	
 	jal check_player 
 	#jal check_enemy
@@ -194,6 +201,8 @@ play_game:
 	jal point_counter_hundreds
 	jal point_counter_thousands
 	jal point_counter_ten_thousands
+
+	jal check_score1 # increase difficulty if needed
 	
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
@@ -426,34 +435,6 @@ random_obst_address:
 	lw $ra, 0($sp) # pop ra from stack
 	addi $sp, $sp, 4
 	jr $ra
-
-random_obst_number:
-	addi $sp, $sp, -4 # push ra to stack
-	sw $ra, 0($sp)
-	
-	li $v0, 42
-	li $a0, 1 # id 1
-	li $a1, 3 # 0 <= int < 3
-	syscall
-	addi $v0, $a0, 0 # return in v0
-	
-	lw $ra, 0($sp) # pop ra from stack
-	addi $sp, $sp, 4
-	jr $ra
-
-random_obst_type:
-	addi $sp, $sp, -4 # push ra to stack
-	sw $ra, 0($sp)
-	
-	li $v0, 42
-	li $a0, 2 # id 2
-	li $a1, 2 # 0 <= int < 2
-	syscall 
-	
-	lw $ra, 0($sp) # pop ra from stack
-	addi $sp, $sp, 4
-	jr $ra
-
 draw_obst1_loading: # fat and slow meteor
 	lb $t8, obstacleSpeed1
 	bgtz $t8, delay_obstacle1 # don't update the address this time around
@@ -824,6 +805,54 @@ go_back:
 	addi $sp, $sp, 4
 	jr $ra
 
+########## PICK-UPS ##########
+delay_pickup:
+	lh $t0, pickupSpeed
+	addi $t0, $t0, -1
+	sh $t0, pickupSpeed
+	jr $ra
+
+draw_pickup:
+	lh $t0, pickupSpeed
+	bgtz $t0, delay_pickup
+	li $t0, PICKUPSPEED
+	sh $t0, pickupSpeed # reset pickup counter
+
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+
+	jal random_location_anywhere # gives random location in v0
+	sw $v0, heartPickup # store the location of the heart
+
+	addi $t0, $v0, 0 # move random location to t0
+	li $t3, xGREEN # get colours
+	li $t2, xLIGHTGREEN
+	
+	jal draw_heart
+	j go_back
+
+random_location_anywhere:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+
+	li $v0, 42
+	li $a0, 5
+	li $a1, 6209 # 0 <= random number < 24036
+	syscall # random num in a0
+	sll $a0, $a0, 2 # multiply by 4
+	addi $a0, $a0, 516 # add 516 so we don't draw on first row
+	
+	li $t2, 512 # for division
+	div $a0, $t2 # a0 / t2 = random location / 512
+	mfhi $t3 # move remainder to t3
+
+	blt $t3, 4, random_location_anywhere # can't be < 4
+	bgt $t3, 488, random_location_anywhere # can't be > 488
+
+	addi $a0, $a0, DISPLAYADDRESS # add display address
+	addi $v0, $a0, 0 # store result in v0
+	j go_back
+
 ########## COLLISIONS ##########
 delay_check_player:
 	lb $t0, checkSpeed
@@ -885,8 +914,25 @@ check_overlaps:
 	beq $t1, DARKRED, lose_life
 	beq $t1, LBROWN, lose_life
 	beq $t1, DBROWN, lose_life
+	beq $t1, xGREEN, gain_life
+	beq $t1, xLIGHTGREEN, gain_life
 
 	jr $ra
+
+gain_life:
+	lb $t4, lives
+	beq $t4, 5, go_back # don't give them more lives
+
+	addi $t4, $t4, 1
+	sb $t4, lives # update lives
+
+	li $t2, PINK
+	li $t3, RED
+
+	beq $t4, 5, heart4 # draw new heart
+	beq $t4, 4, heart3
+	beq $t4, 3, heart2
+	beq $t4, 2, heart1
 
 lose_life:
 	li $t9, CHECKSPEED # after you lose a life, then reset the check speed
@@ -894,6 +940,7 @@ lose_life:
 
 	lb $t4, lives
 	addi $t4, $t4, -1
+	sb $t4, lives # update current lives
 
 	li $t2, BLACK
 	li $t3, BLACK
@@ -907,31 +954,26 @@ lose_life:
 heart4:
 	li $t0, HEART5
 	jal draw_heart
-	sb $t4, lives
 	j go_back
 
 heart3:
 	li $t0, HEART4
 	jal draw_heart
-	sb $t4, lives
 	j go_back
 
 heart2:
 	li $t0, HEART3
 	jal draw_heart
-	sb $t4, lives
 	j go_back
 
 heart1:
 	li $t0, HEART2
 	jal draw_heart
-	sb $t4, lives
 	j go_back
 
 heart0:
 	li $t0, HEART1
 	jal draw_heart
-	sb $t0, lives
 	j draw_game_over
 
 ########## STAR BACKGROUND ##########
@@ -1158,11 +1200,11 @@ restart:
 	li $t0, 5 # reset lives
 	sb $t0, lives
 
-	li $s1, 0 # reset scores
+	li $s5, 0 # reset score
+	li $s1, 0
 	li $s2, 0
 	li $s3, 0
 	li $s4, 0
-	li $s5, 0
 
 	jal draw_countdown # countdown
 	j play_game # get random location for obstacle
@@ -1410,6 +1452,24 @@ draw_board:
 	# drawing letters and numbers functions
 
 ########## SCORE COUNTER FUNCTIONS ##########
+check_score1:
+	beq $s2, 1, check_score2
+	beq $s2, 2, check_score2
+	jr $ra
+
+check_score2:
+	beq $s1, 0, check_score3
+	jr $ra
+
+check_score3:
+	beq $s5, 0, increase_difficulty
+	jr $ra
+
+increase_difficulty:
+	beq $s0, 3, no_response
+	addi $s0, $s0, 1 # add 1 to difficulty
+	jr $ra
+
 no_update:
 	lb $t0, scoreSpeed
 	addi $t0, $t0, -1
