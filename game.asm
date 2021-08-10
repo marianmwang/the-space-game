@@ -120,9 +120,9 @@
 # collisions speed
 .eqv 	CHECKSPEED 100
 # pick up speed
-.eqv 	PICKUPAPPEAR  	4000
-.eqv  	PICKUPDISAPPEAR 1500
-.eqv 	INVINCIBIILITY 	1000
+.eqv 	PICKUPAPPEAR  	2000
+.eqv  	PICKUPDISAPPEAR 1000
+.eqv 	INVINCIBIILITY 	500
 
 # game over location
 .eqv 	GAME_OVER 		0x1000AAAC
@@ -903,7 +903,15 @@ random_pickup:
 	
 	li $v0, 42
 	li $a0, 7 # id 7
-	li $a1, 3 # 0 <= int < 3
+	beq $s0, 2, change_random_pickup
+	li $a1, 3 # 0 <= int < 3, all types of pickups
+	syscall
+
+	addi $s7, $a0, 0 # s7 stores current pickup type
+	j go_back
+
+change_random_pickup:
+	li $a1, 2 # 0 <= int < 2, just coins and hearts
 	syscall
 
 	addi $s7, $a0, 0 # s7 stores current pickup type
@@ -918,15 +926,17 @@ draw_random_pickup:
 	sh $t4, pickupSpeed
 
 	bgtz $t4, continue_pickup_drawing # if it's not time to choose new pickup, continue the current one
+	li $s7, 0 # 0 = coin
+	beq $s0, 3, draw_pickup3
 	jal random_pickup # generate new random pickup
-	beq $a0, 0, draw_pickup1
-	beq $a0, 1, draw_pickup2
-	j draw_pickup3
+	beqz $a0, draw_pickup3 # 0 = coin
+	beq $a0, 1, draw_pickup1 # 1 = heart
+	j draw_pickup2 # 2 = shield
 
 continue_pickup_drawing:
-	beq $s7, 1, draw_pickup2
-	beqz $s7, draw_pickup1
-	j draw_pickup3
+	beq $s7, 1, draw_pickup1
+	beqz $s7, draw_pickup3
+	j draw_pickup2
 
 delay_pickup:
 	lh $t0, pickupSpeed
@@ -1033,7 +1043,7 @@ random_location_anywhere:
 
 	li $v0, 42
 	li $a0, 5
-	li $a1, 5877 # 0 <= random number < 24036
+	li $a1, 5621 # 0 <= random number < x
 	syscall # random num in a0
 	sll $a0, $a0, 2 # multiply by 4
 	addi $a0, $a0, 516 # add 516 so we don't draw on first row
@@ -1761,10 +1771,11 @@ draw_board:
 
 ########## SCORE COUNTER FUNCTIONS ##########
 check_score1:
+	beq $s0, 3, no_response
 	lb $t0, scoreSpeed
 	bgtz $t0, no_update # don't check if score hasn't been updated
-	bge $s2, 5, check_score2 # check if hundreds is > 5
-	bge $s2, 2, check_score2 # check if hundreds is > 2
+	bge $s2, 8, check_score2 # check if hundreds is > x
+	bge $s2, 4, check_score2 # check if hundreds is > x
 	jr $ra
 
 check_score2:
@@ -1776,7 +1787,6 @@ check_score3:
 	jr $ra
 
 increase_difficulty:
-	beq $s0, 3, no_response
 	addi $s0, $s0, 1 # add 1 to difficulty
 	jr $ra
 
@@ -2410,9 +2420,9 @@ draw_shield: # erase shield by setting t1, t2, t3 to black (t1 = lightest, t3 = 
 	sw $t2, 1548($t0)
 	sw $t2, 1552($t0)
 	sw $t1, 2052($t0)
-	sw $t3, 2060($t0)
+	sw $t3, 2056($t0)
+	sw $t2, 2060($t0)
 	sw $t3, 2568($t0)
-	sw $t2, 2056($t0)
 	jr $ra
 
 draw_coin:
