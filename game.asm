@@ -70,6 +70,12 @@
 # pick-up colours
 .eqv 	xLIGHTGREEN 0xb2ff59
 .eqv 	xGREEN		0x388e3c
+.eqv 	xBLUE 		0x2196f3
+.eqv 	xDARKBLUE 	0x1565c0
+.eqv 	xxLIGHTBLUE 0xbddefb
+.eqv 	cYELLOW 	0xffc107
+.eqv 	cLIGHTYELLOW 0xfff176
+.eqv 	cORANGE		0xf57f17
 # exploasion colour
 .eqv	ORANGE		0xff9800
 # ship dimensions
@@ -114,8 +120,9 @@
 # collisions speed
 .eqv 	CHECKSPEED 100
 # pick up speed
-.eqv 	PICKUPAPPEAR  	3000
-.eqv  	PICKUPDISAPPEAR 1000
+.eqv 	PICKUPAPPEAR  	4000
+.eqv  	PICKUPDISAPPEAR 1500
+.eqv 	INVINCIBIILITY 	1000
 
 # game over location
 .eqv 	GAME_OVER 		0x1000AAAC
@@ -132,7 +139,7 @@
 	# OBSTACLES
 	obstacleAddress1: .word 0x1000800c
 	obstacleAddress2: .word 0x1000808c
-	obstacleAddress3: .word 0x100080fc
+	obstacleAddress3: .word 0x1000cf60
 	
 	obstacleSpeed1: .byte 0
 	obstacleSpeed2: .byte 0
@@ -166,8 +173,11 @@
 	checkSpeed: 	.byte 0
 
 	# PICKUPS
+	currentPickup: 	.byte 0
 	pickupSpeed: 	.half 0
 	heartPickup: 	.word 0
+	shieldPickup: 	.word 0
+	coinPickup: 	.word 0
 
 .text
 ########## WELCOME ##########
@@ -181,6 +191,7 @@ welcome:
 
 ########## MAIN PROGRAM ##########
 play_game:
+	# pretty star background
 	lw $a0, starAddress1
 	jal move_big_star
 	sw $v0, starAddress1
@@ -241,9 +252,11 @@ play_game:
 	jal move_small_star
 	sw $v0, starAddress15
 
+	# player movements
 	jal draw_ship
 	jal keypress
 	
+	# draw enemy ships 
 	lw $a0, enemyShipLocation1
 	jal draw_enemy_ship_loading
 	sw $v0, enemyShipLocation1
@@ -256,6 +269,7 @@ play_game:
 	jal draw_enemy_ship_loading
 	sw $v0, enemyShipLocation3
 
+	# draw obstacles
 	lw $a0, obstacleAddress1
 	jal draw_obst1_loading
 	sw $v0, obstacleAddress1
@@ -268,11 +282,13 @@ play_game:
 	jal draw_obst2_loading
 	sw $v0, obstacleAddress3
 
-	jal draw_pickup
+	# draw pickup
+	jal draw_random_pickup
 	
+	# check collisions
 	jal check_player 
-	#jal check_enemy
-	
+
+	# update score
 	jal point_counter_ones
 	jal point_counter_tens
 	jal point_counter_hundreds
@@ -758,9 +774,7 @@ random_direction:
 	
 	addi $v0, $a0, 0
 	
-	lw $ra, 0($sp) # pop ra from stack
-	addi $sp, $sp, 4
-	jr $ra
+	j go_back
 	
 draw_enemy_ship_loading:
 	lb $t8, enemyShipSpeed
@@ -883,13 +897,19 @@ go_back:
 	jr $ra
 
 ########## PICK-UPS ##########
-delay_pickup:
-	lh $t0, pickupSpeed
-	addi $t0, $t0, -1
-	sh $t0, pickupSpeed
-	jr $ra
+random_pickup:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42
+	li $a0, 7 # id 7
+	li $a1, 3 # 0 <= int < 3
+	syscall
 
-draw_pickup:
+	addi $s7, $a0, 0 # s7 stores current pickup type
+	j go_back
+
+draw_random_pickup:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 
@@ -897,6 +917,24 @@ draw_pickup:
 	addi $t4, $t4, -1 # decrement
 	sh $t4, pickupSpeed
 
+	bgtz $t4, continue_pickup_drawing # if it's not time to choose new pickup, continue the current one
+	jal random_pickup # generate new random pickup
+	beq $a0, 0, draw_pickup1
+	beq $a0, 1, draw_pickup2
+	j draw_pickup3
+
+continue_pickup_drawing:
+	beq $s7, 1, draw_pickup2
+	beqz $s7, draw_pickup1
+	j draw_pickup3
+
+delay_pickup:
+	lh $t0, pickupSpeed
+	addi $t0, $t0, -1
+	sh $t0, pickupSpeed
+	jr $ra
+
+draw_pickup1:
 	blez $t4, new_heart_location # if pickupSpeed <= 0, reset
 	blt $t4, PICKUPDISAPPEAR, go_back # if 0 < pickupSpeed < PICKUPDISAPPEAR, do nothing
 	beq $t4, PICKUPDISAPPEAR, erase_heart_pickup # if pickupSpeed = PICKUPDISAPPEAR, make it disappear
@@ -917,8 +955,24 @@ erase_heart_pickup:
 	jal draw_heart # erase the pickup
 	j go_back
 
+erase_shield_pickup:
+	li $t3, BLACK
+	li $t2, BLACK
+	li $t1, BLACK
+	lw $t0, shieldPickup
+	jal draw_shield # erase the pickup
+	j go_back
+
+erase_coin_pickup:
+	li $t1, BLACK
+	li $t2, BLACK
+	li $t3, BLACK
+	lw $t0, coinPickup
+	jal draw_coin # erase the pickup
+	j go_back
+
 new_heart_location: 
-	li $t4, PICKUPAPPEAR # reset pickupSpeed to PICKUPAPPEAR
+	li $t4, PICKUPAPPEAR # reset pickupSpeed to PICKUPAPPEAR (bigger than PICKUPDISAPPEAR)
 	sh $t4, pickupSpeed
 
 	jal random_location_anywhere
@@ -929,6 +983,49 @@ new_heart_location:
 	li $t2, xLIGHTGREEN
 	jal draw_heart
 	j go_back # go back to main play_game
+
+new_shield_location:
+	li $t4, PICKUPAPPEAR # reset pickupSpeed to PICKUPAPPEAR (bigger than PICKUPDISAPPEAR)
+	sh $t4, pickupSpeed
+
+	jal random_location_anywhere
+	sw $v0, shieldPickup # store new heart location
+
+	lw $t0, shieldPickup
+	li $t1, xLIGHTBLUE # get colours
+	li $t2, xBLUE
+	li $t3, xDARKBLUE
+	jal draw_shield
+	j go_back # go back to main play_game
+
+new_coin_location:
+	li $t4, PICKUPAPPEAR # reset pickupSpeed to PICKUPAPPEAR (bigger than PICKUPDISAPPEAR)
+	sh $t4, pickupSpeed
+
+	jal random_location_anywhere
+	sw $v0, coinPickup # store new heart location
+
+	lw $t0, coinPickup
+	li $t1, cLIGHTYELLOW # get colours
+	li $t2, cYELLOW
+	li $t3, cORANGE
+	jal draw_coin
+	j go_back # go back to main play_game
+
+draw_pickup2:
+	blez $t4, new_shield_location # if pickupSpeed <= 0, reset
+	blt $t4, PICKUPDISAPPEAR, go_back # if 0 < pickupSpeed < PICKUPDISAPPEAR, do nothing
+	beq $t4, PICKUPDISAPPEAR, erase_shield_pickup # if pickupSpeed = PICKUPDISAPPEAR, make it disappear
+
+	# else, continue to draw the pickup
+
+	lw $t0, shieldPickup
+	li $t1, xxLIGHTBLUE # get colours
+	li $t2, xBLUE
+	li $t3, xDARKBLUE
+	
+	jal draw_shield
+	j go_back # pop ra from stack
 
 random_location_anywhere:
 	addi $sp, $sp, -4 # push ra to stack
@@ -952,6 +1049,30 @@ random_location_anywhere:
 	addi $v0, $a0, 0 # store result in v0
 	j go_back
 
+delay_invincible:
+	addi $s6, $s6, -1
+
+	li $t2, PINK # redraw hearts red
+	li $t3, RED 
+
+	beqz $s6, redraw_hearts
+	jr $ra
+
+draw_pickup3:
+	blez $t4, new_coin_location # if pickupSpeed <= 0, reset
+	blt $t4, PICKUPDISAPPEAR, go_back # if 0 < pickupSpeed < PICKUPDISAPPEAR, do nothing
+	beq $t4, PICKUPDISAPPEAR, erase_coin_pickup # if pickupSpeed = PICKUPDISAPPEAR, make it disappear
+
+	# else, continue to draw the pickup
+
+	lw $t0, coinPickup
+	li $t1, cLIGHTYELLOW # get colours
+	li $t2, cYELLOW
+	li $t3, cORANGE
+	
+	jal draw_coin
+	j go_back # pop ra from stack
+
 ########## COLLISIONS ##########
 delay_check_player:
 	lb $t0, checkSpeed
@@ -960,6 +1081,8 @@ delay_check_player:
 	jr $ra
 
 check_player:
+	bgtz $s6, delay_invincible # s6 != 0 means we are invincible
+
 	lb $t0, checkSpeed
 	bgtz $t0, delay_check_player
 
@@ -1015,8 +1138,72 @@ check_overlaps:
 	beq $t1, DBROWN, lose_life
 	beq $t1, xGREEN, gain_life
 	beq $t1, xLIGHTGREEN, gain_life
+	beq $t1, xxLIGHTBLUE, go_invincible
+	beq $t1, xBLUE, go_invincible
+	beq $t1, xDARKBLUE, go_invincible
+	beq $t1, cYELLOW, add_points
+	beq $t1, cLIGHTYELLOW, add_points
+	beq $t1, cORANGE, add_points
 
 	jr $ra
+
+add_points:
+	lw $t0, coinPickup
+	li $t1, BLACK
+	li $t2, BLACK
+	li $t3, BLACK
+	jal draw_coin # erase the pickup coin
+
+	li $t4, PICKUPDISAPPEAR # reset pickupSpeed to PICKUPDISAPPEAR
+	sh $t4, pickupSpeed
+
+	# jal add_100_points # christine please help me
+
+	j go_back
+
+go_invincible:
+	li $s6, INVINCIBIILITY # loads INVINCIBILITY
+
+	lw $t0, shieldPickup
+	li $t2, BLACK
+	li $t3, BLACK
+	li $t1, BLACK
+	jal draw_shield # erase the pickup shield
+
+	li $t4, PICKUPDISAPPEAR # reset pickupSpeed to PICKUPDISAPPEAR
+	sh $t4, pickupSpeed
+
+	li $t2, xxLIGHTBLUE # redraw the hearts in blue
+	li $t3, xBLUE
+
+redraw_hearts:
+	lb $t4, lives
+
+	beq $t4, 4, blue_heart4
+	beq $t4, 3, blue_heart3
+	beq $t4, 2, blue_heart2
+	beq $t4, 1, blue_heart1
+
+blue_heart5:
+	li $t0, HEART5
+	jal draw_heart
+
+blue_heart4:
+	li $t0, HEART4
+	jal draw_heart
+
+blue_heart3:
+	li $t0, HEART3
+	jal draw_heart
+
+blue_heart2:
+	li $t0, HEART2
+	jal draw_heart
+
+blue_heart1:
+	li $t0, HEART1
+	jal draw_heart
+	j go_back
 
 gain_life:
 	lw $t0, heartPickup
@@ -1314,6 +1501,9 @@ restart:
 
 	li $t0, 5 # reset lives
 	sb $t0, lives
+
+	li $s7, 0 # random pickup type = 0
+	li $s6, 0 # no invinciblity
 
 	li $s5, 0 # reset score
 	li $s1, 0
@@ -2180,6 +2370,76 @@ draw_heart: # can be used to erase heart too by setting $t2 and $t3 to black
 	sw $t2, 1032($t0)
 	sw $t3, 1036($t0)
 	sw $t3, 1544($t0)
+	jr $ra
+
+draw_shield: # erase shield by setting t1, t2, t3 to black (t1 = lightest, t3 = darkest)
+	sw $t2, 0($t0)
+	sw $t2, 4($t0)
+	sw $t3, 8($t0)
+	sw $t1, 12($t0)
+	sw $t1, 16($t0)
+	sw $t2, 512($t0)
+	sw $t2, 516($t0)
+	sw $t3, 520($t0)
+	sw $t1, 524($t0)
+	sw $t1, 528($t0)
+	sw $t3, 1024($t0)
+	sw $t3, 1028($t0)
+	sw $t3, 1032($t0)
+	sw $t3, 1036($t0)
+	sw $t3, 1040($t0)
+	sw $t1, 1536($t0)
+	sw $t1, 1540($t0)
+	sw $t3, 1544($t0)
+	sw $t2, 1548($t0)
+	sw $t2, 1552($t0)
+	sw $t1, 2052($t0)
+	sw $t3, 2060($t0)
+	sw $t2, 2568($t0)
+	sw $t3, 2056($t0)
+	jr $ra
+
+draw_coin:
+	# outside
+	sw $t2, 8($t0)
+	sw $t2, 12($t0)
+	sw $t2, 16($t0)
+	sw $t2, 516($t0)
+	sw $t2, 532($t0)
+	sw $t2, 1024($t0)
+	sw $t2, 1048($t0)
+	sw $t2, 1536($t0)
+	sw $t2, 1560($t0)
+	sw $t2, 2048($t0)
+	sw $t2, 2072($t0)
+	sw $t2, 2564($t0)
+	sw $t2, 2580($t0)
+	sw $t2, 3080($t0)
+	sw $t2, 3084($t0)
+	sw $t2, 3088($t0)
+	# inside
+	sw $t1, 520($t0)
+	sw $t1, 524($t0)
+	sw $t1, 528($t0)
+	sw $t1, 1028($t0)
+	sw $t1, 1044($t0)
+	sw $t1, 1540($t0)
+	sw $t1, 1548($t0)
+	sw $t1, 1552($t0)
+	sw $t1, 1556($t0)
+	sw $t1, 2052($t0)
+	sw $t1, 2068($t0)
+	sw $t1, 2568($t0)
+	sw $t1, 2572($t0)
+	sw $t1, 2576($t0)
+	# c
+	sw $t3, 1032($t0)
+	sw $t3, 1036($t0)
+	sw $t3, 1040($t0)
+	sw $t3, 1544($t0)
+	sw $t3, 2056($t0)
+	sw $t3, 2060($t0)
+	sw $t3, 2064($t0)
 	jr $ra
 
 draw_zero:
