@@ -1370,7 +1370,7 @@ random_star_address2:
 	
 	li $v0, 42
 	li $a0, 5 # id 5
-	li $a1, 50 # 0 <= int < 50
+	li $a1, 45 # 0 <= int < 45
 	syscall
 	
 	sll $a0, $a0, 9 # a0 * 512
