@@ -102,7 +102,7 @@
 .eqv 	HUNDREDS 		0x1000F3CC
 .eqv 	THOUSANDS 		0x1000F3BC
 .eqv 	TENTHOUSANDS 		0x1000F3AC
-.eqv 	SCORESPEED		10
+.eqv 	SCORESPEED		30
 # heart locations
 .eqv 	HEART1	0x1000F408
 .eqv 	HEART2 	0x1000F420
@@ -112,7 +112,7 @@
 # collisions speed
 .eqv 	CHECKSPEED 100
 # pick up speed
-.eqv 	PICKUPSPEED 2000	
+.eqv 	PICKUPSPEED 2000
 
 # game over location
 .eqv 	GAME_OVER 		0x1000AAAC
@@ -149,7 +149,7 @@
 	checkSpeed: 	.byte 0
 
 	# PICKUPS
-	pickupSpeed: 	.half 0
+	pickupSpeed: 	.half 200
 	heartPickup: 	.word 0
 
 .text
@@ -816,7 +816,7 @@ draw_pickup:
 	lh $t0, pickupSpeed
 	bgtz $t0, delay_pickup
 	li $t0, PICKUPSPEED
-	sh $t0, pickupSpeed # reset pickup counter
+	sh $t0, pickupSpeed # reset pickup counter after you gain life
 
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
@@ -831,13 +831,20 @@ draw_pickup:
 	jal draw_heart
 	j go_back
 
+erase_heart_pickup:
+	li $t3, BLACK
+	li $t2, BLACK
+	lw $t0, heartPickup
+	jal draw_heart # erase the pickup
+	j gain_life
+
 random_location_anywhere:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 
 	li $v0, 42
 	li $a0, 5
-	li $a1, 6209 # 0 <= random number < 24036
+	li $a1, 6081 # 0 <= random number < 24036
 	syscall # random num in a0
 	sll $a0, $a0, 2 # multiply by 4
 	addi $a0, $a0, 516 # add 516 so we don't draw on first row
@@ -914,14 +921,14 @@ check_overlaps:
 	beq $t1, DARKRED, lose_life
 	beq $t1, LBROWN, lose_life
 	beq $t1, DBROWN, lose_life
-	beq $t1, xGREEN, gain_life
-	beq $t1, xLIGHTGREEN, gain_life
+	beq $t1, xGREEN, erase_heart_pickup
+	beq $t1, xLIGHTGREEN, erase_heart_pickup
 
 	jr $ra
 
 gain_life:
 	lb $t4, lives
-	beq $t4, 5, go_back # don't give them more lives
+	beq $t4, 5, go_back # don't give them more live
 
 	addi $t4, $t4, 1
 	sb $t4, lives # update lives
@@ -1453,8 +1460,10 @@ draw_board:
 
 ########## SCORE COUNTER FUNCTIONS ##########
 check_score1:
-	beq $s2, 1, check_score2
+	lb $t0, scoreSpeed
+	bgtz $t0, no_update # don't check if score hasn't been updated
 	beq $s2, 2, check_score2
+	beq $s2, 1, check_score2
 	jr $ra
 
 check_score2:
@@ -1462,7 +1471,7 @@ check_score2:
 	jr $ra
 
 check_score3:
-	beq $s5, 0, increase_difficulty
+	beq $s5, 10, increase_difficulty
 	jr $ra
 
 increase_difficulty:
@@ -1485,8 +1494,7 @@ point_counter_ones:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
 	
-	li $t0, DISPLAYADDRESS
-	addi $t0, $t0, 29676
+	li $t0, ONES
 	beq $s5, 0, draw_point_zero
 	beq $s5, 1, draw_point_one
 	beq $s5, 2, draw_point_two
@@ -1502,8 +1510,7 @@ point_counter_tens:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
 	
-	li $t0, DISPLAYADDRESS
-	addi $t0, $t0, 29660
+	li $t0, TENS
 	subi $s5, $s5, 1
 	beq $s1, 0, draw_point_zero
 	beq $s1, 1, draw_point_one
@@ -1520,8 +1527,7 @@ point_counter_hundreds:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
 	
-	li $t0, DISPLAYADDRESS
-	addi $t0, $t0, 29644
+	li $t0, HUNDREDS
 	subi $s5, $s5, 1
 	beq $s2, 0, draw_point_zero
 	beq $s2, 1, draw_point_one
@@ -1538,8 +1544,7 @@ point_counter_thousands:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
 	
-	li $t0, DISPLAYADDRESS
-	addi $t0, $t0, 29628
+	li $t0, THOUSANDS
 	subi $s5, $s5, 1
 	beq $s3, 0, draw_point_zero
 	beq $s3, 1, draw_point_one
@@ -1556,8 +1561,7 @@ point_counter_ten_thousands:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
 	
-	li $t0, DISPLAYADDRESS
-	addi $t0, $t0, 29612
+	li $t0, TENTHOUSANDS
 	subi $s5, $s5, 1
 	beq $s4, 0, draw_point_zero
 	beq $s4, 1, draw_point_one
