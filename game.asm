@@ -1463,8 +1463,8 @@ draw_board:
 check_score1:
 	lb $t0, scoreSpeed
 	bgtz $t0, no_update # don't check if score hasn't been updated
+	beq $s2, 5, check_score2
 	beq $s2, 2, check_score2
-	beq $s2, 1, check_score2
 	jr $ra
 
 check_score2:
