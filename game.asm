@@ -3066,7 +3066,7 @@ draw_explosion3:
 
 draw_game_over:
 	lw $t0, shipAddress
-	li $a0, 500
+	li $a0, 250
 	li $t1, RED # $t1 stores red
 	li $t2, YELLOW # $t2 stores yellow
 	li $t3, WHITE # $t3 stores white
@@ -3077,16 +3077,24 @@ draw_game_over:
 	jal draw_explosion2
 	jal pause
 	jal draw_explosion3
+	jal pause
 	li $t0, GAME_OVER
 	li $t1, WHITE
 	jal draw_G
+	jal pause
 	jal draw_A
+	jal pause
 	jal draw_M
+	jal pause
 	jal draw_E
 	addi $t0, $t0, 8
+	jal pause
 	jal draw_O
+	jal pause
 	jal draw_V
+	jal pause
 	jal draw_E
+	jal pause
 	jal draw_R
 
 game_over_check:
