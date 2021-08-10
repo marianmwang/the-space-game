@@ -772,7 +772,7 @@ random_direction:
 	sw $ra, 0($sp)
 	
 	li $v0, 42
-	li $a0, 4 # id 4
+	li $a0, 2 # id 2
 	li $a1, 4 # 0 <= int < 4
 	syscall
 	
@@ -906,7 +906,7 @@ random_pickup:
 	sw $ra, 0($sp)
 	
 	li $v0, 42
-	li $a0, 7 # id 7
+	li $a0, 3 # id 3
 	beq $s0, 2, change_random_pickup
 	li $a1, 3 # 0 <= int < 3, all types of pickups
 	syscall
@@ -1046,7 +1046,7 @@ random_location_anywhere:
 	sw $ra, 0($sp)
 
 	li $v0, 42
-	li $a0, 5
+	li $a0, 4 # id 4
 	li $a1, 5621 # 0 <= random number < x
 	syscall # random num in a0
 	sll $a0, $a0, 2 # multiply by 4
@@ -1369,7 +1369,7 @@ random_star_address2:
 	sw $ra, 0($sp)
 	
 	li $v0, 42
-	li $a0, 5 # id 5
+	li $a0, 6 # id 6
 	li $a1, 45 # 0 <= int < 45
 	syscall
 	
