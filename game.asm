@@ -20,9 +20,10 @@
 #
 # Which approved features have been implemented for milestone 3?
 # (See the assignment handout for the list of additional features)
-# 1. Pick-ups
-# 2. Score System
-# 3. Enemy Ships
+# 1. Different levels
+# 2. Increase in difficulty as game progresses
+# 3. Scoring system
+# 4. Enemy ships
 #
 # Link to video demonstration for final submission:
 # -(insert YouTube / MyMedia / other URL here). Make sure we can view it!
