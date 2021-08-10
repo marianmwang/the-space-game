@@ -167,6 +167,10 @@
 	# SCORE
 	# score is stored in $s4 $s3 $s2 $s1 $s5
 	scoreSpeed: 		.byte 0
+	scoreHearts: 	.byte 0
+	scoreCoins: 	.byte 0
+	scoreShields: 	.byte 0
+	scoreHit: 	.byte 0
 	
 	# LIVES
 	lives: 			.byte 5
@@ -1287,7 +1291,7 @@ random_star_address1:
 	
 	li $v0, 42
 	li $a0, 5 # id 5
-	li $a1, 45 # 0 <= int < 45
+	li $a1, 43 # 0 <= int < 43
 	syscall
 	
 	sll $a0, $a0, 9 # a0 * 512
