@@ -92,10 +92,10 @@
 .eqv 	SHIP_5R 	2052
 # obstacle location
 .eqv 	OBSTACLE_LOC 	0x1000800c
-.eqv 	OBSTACLESPEED1 	10
-.eqv 	OBSTACLESPEED2 	8
-.eqv 	OBSTACLESPEED3 	7
-.eqv 	OBSTACLESPEED4 	4
+.eqv 	OBSTACLESPEED1 	12
+.eqv 	OBSTACLESPEED2 	10
+.eqv 	OBSTACLESPEED3 	8
+.eqv 	OBSTACLESPEED4 	6
 .eqv 	OBSTACLESPEED5 	3
 .eqv 	OBSTACLESPEED6 	2
 # enemy ship speed
@@ -1057,7 +1057,7 @@ random_location_anywhere:
 	mfhi $t3 # move remainder to t3
 
 	blt $t3, 4, random_location_anywhere # can't be < 4
-	bgt $t3, 488, random_location_anywhere # can't be > 488
+	bgt $t3, 480, random_location_anywhere # can't be > 488
 
 	addi $a0, $a0, DISPLAYADDRESS # add display address
 	addi $v0, $a0, 0 # store result in v0
@@ -1778,16 +1778,12 @@ check_score1:
 	beq $s0, 3, no_response
 	lb $t0, scoreSpeed
 	bgtz $t0, no_update # don't check if score hasn't been updated
-	bge $s2, 8, check_score2 # check if hundreds is > x
-	bge $s2, 4, check_score2 # check if hundreds is > x
+	bge $s2, 8, increase_difficulty # increase difficulty to hard if hundreds > 8
+	bge $s2, 3, check_score2 # check if hundreds is > 3
 	jr $ra
 
 check_score2:
-	beq $s1, 0, check_score3
-	jr $ra
-
-check_score3:
-	beq $s5, 10, increase_difficulty
+	beq $s0, 1, increase_difficulty # increase difficulty to normal if the previous difficulty is easy
 	jr $ra
 
 increase_difficulty:
