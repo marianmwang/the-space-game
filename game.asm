@@ -1033,7 +1033,7 @@ random_location_anywhere:
 
 	li $v0, 42
 	li $a0, 5
-	li $a1, 6005 # 0 <= random number < 24036
+	li $a1, 5877 # 0 <= random number < 24036
 	syscall # random num in a0
 	sll $a0, $a0, 2 # multiply by 4
 	addi $a0, $a0, 516 # add 516 so we don't draw on first row
@@ -1366,6 +1366,10 @@ random_star_address2:
 	
 	j go_back
 
+erase_stupid_star:
+	sw $t1, 0($a0)
+	j random_star_address2
+
 move_small_star:
 	lb $t0, starSpeed
 	bgtz, $t0, delay_star
@@ -1377,7 +1381,6 @@ move_small_star:
 
 	li $t0, DARKPURPLE
 	li $t1, BLACK
-	
 	sw $t0, 0($a0)
 	sw $t1, 4($a0)
 	
@@ -1385,8 +1388,8 @@ move_small_star:
 	li $t0, 512 # if it will go across the screen, get random location
 	div $v0, $t0
 	mfhi, $t4
-	beq $t4, 508, random_star_address2 # if it would appear on right side again
-	
+	beq $t4, 508, erase_stupid_star # if it would appear on right side again
+
 	j go_back
 
 ########## SCREEN FUNCTIONS ##########
@@ -2395,8 +2398,8 @@ draw_shield: # erase shield by setting t1, t2, t3 to black (t1 = lightest, t3 = 
 	sw $t2, 1552($t0)
 	sw $t1, 2052($t0)
 	sw $t3, 2060($t0)
-	sw $t2, 2568($t0)
-	sw $t3, 2056($t0)
+	sw $t3, 2568($t0)
+	sw $t2, 2056($t0)
 	jr $ra
 
 draw_coin:
