@@ -73,7 +73,7 @@
 .eqv 	xBLUE 		0x2196f3
 .eqv 	xDARKBLUE 	0x1565c0
 .eqv 	xxLIGHTBLUE 0xbddefb
-.eqv 	cYELLOW 	0xffc107
+.eqv 	cYELLOW 	0xffc108
 .eqv 	cLIGHTYELLOW 0xfff176
 .eqv 	cORANGE		0xf57f17
 # exploasion colour
@@ -1003,9 +1003,9 @@ new_coin_location:
 	sh $t4, pickupSpeed
 
 	jal random_location_anywhere
-	sw $v0, coinPickup # store new heart location
+	sw $v0, coinPickup # store new coin location
 
-	lw $t0, coinPickup
+	addi $t0, $v0, 0
 	li $t1, cLIGHTYELLOW # get colours
 	li $t2, cYELLOW
 	li $t3, cORANGE
@@ -1033,7 +1033,7 @@ random_location_anywhere:
 
 	li $v0, 42
 	li $a0, 5
-	li $a1, 6081 # 0 <= random number < 24036
+	li $a1, 6005 # 0 <= random number < 24036
 	syscall # random num in a0
 	sll $a0, $a0, 2 # multiply by 4
 	addi $a0, $a0, 516 # add 516 so we don't draw on first row
@@ -1148,11 +1148,11 @@ check_overlaps:
 	jr $ra
 
 add_points:
-	lw $t0, coinPickup
+	lw $t0, coinPickup # erase coin
 	li $t1, BLACK
 	li $t2, BLACK
 	li $t3, BLACK
-	jal draw_coin # erase the pickup coin
+	jal draw_coin
 
 	li $t4, PICKUPDISAPPEAR # reset pickupSpeed to PICKUPDISAPPEAR
 	sh $t4, pickupSpeed
