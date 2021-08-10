@@ -1157,7 +1157,7 @@ add_points:
 	li $t4, PICKUPDISAPPEAR # reset pickupSpeed to PICKUPDISAPPEAR
 	sh $t4, pickupSpeed
 
-	# jal add_100_points # christine please help me
+	addi $s2, $s2, 1 # add 100 points
 
 	j go_back
 
@@ -1763,8 +1763,8 @@ draw_board:
 check_score1:
 	lb $t0, scoreSpeed
 	bgtz $t0, no_update # don't check if score hasn't been updated
-	beq $s2, 5, check_score2
-	beq $s2, 2, check_score2
+	bge $s2, 5, check_score2 # check if hundreds is > 5
+	bge $s2, 2, check_score2 # check if hundreds is > 2
 	jr $ra
 
 check_score2:
@@ -1841,6 +1841,7 @@ point_counter_hundreds:
 	beq $s2, 8, draw_point_eight
 	beq $s2, 9, draw_point_nine
 	beq $s2, 10, initialize_hundreds
+	beq $s2, 11, initialize_hundreds2
 point_counter_thousands:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp) # stack push ra
@@ -2000,6 +2001,18 @@ initialize_hundreds: # from 9 to 0 (hundreds digit)
 	sw $t4, 2052($t0)
 	addi $s5, $s5, 1
 	li $s2, 0
+	addi $s3, $s3, 1
+	j go_back
+initialize_hundreds2:
+	li $t4, BLACK
+	sw $t4, 1028($t0)
+	
+	li $t4, YELLOW
+	sw $t4, 1536($t0)
+	sw $t4, 2048($t0)
+	sw $t4, 2052($t0)
+	addi $s5, $s5, 1
+	li $s2, 1
 	addi $s3, $s3, 1
 	j go_back
 initialize_thousands:
