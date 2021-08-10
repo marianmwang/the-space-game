@@ -97,8 +97,7 @@
 .eqv 	ENEMYSHIPSPEED2	9
 .eqv 	ENEMYSHIPSPEED3	6
 # stars speed
-.eqv 	STARSPEED1 	10
-.eqv 	STARSPEED2	30
+.eqv 	STARSPEED 		13
 # score counter locations
 .eqv 	ONES 			0x1000F3EC
 .eqv 	TENS 			0x1000F3DC
@@ -139,13 +138,27 @@
 	obstacleSpeed2: .byte 0
 	
 	# STARS
-	starAddress1: .word 0x10008ccc
-	starAddress2: .word 0x10009000
-	starSpeed1: .byte 0
-	starSpeed2: .byte 0
+	# big
+	starAddress1: 	.word 0x100095ec
+	starAddress2: 	.word 0x100094f4
+	starAddress3: 	.word 0x1000a4a0
+	starAddress4: 	.word 0x10008dc4
+	# small
+	starAddress5: 	.word 0x10009590
+	starAddress6: 	.word 0x1000AE28
+	starAddress7: 	.word 0x10009894
+	starAddress8: 	.word 0x1000b548
+	starAddress9: 	.word 0x1000DB3C
+	starAddress10: 	.word 0x1000bf58
+	starAddress11:	.word 0x10008df8
+	starAddress12: 	.word 0x1000b41c
+	starAddress13: 	.word 0x100093e8
+	starAddress14: 	.word 0x1000e3b0
+	starAddress15: 	.word 0x1000cf0c
+	starSpeed:  	.byte 0
 
 	# SCORE
-	# score is stored in $s4 $s3 $s2 $s1 $ s5
+	# score is stored in $s4 $s3 $s2 $s1 $s5
 	scoreSpeed: 		.byte 0
 	
 	# LIVES
@@ -168,6 +181,66 @@ welcome:
 
 ########## MAIN PROGRAM ##########
 play_game:
+	lw $a0, starAddress1
+	jal move_big_star
+	sw $v0, starAddress1
+
+	lw $a0, starAddress2
+	jal move_big_star
+	sw $v0, starAddress2
+	
+	lw $a0, starAddress3
+	jal move_big_star
+	sw $v0, starAddress3
+
+	lw $a0, starAddress4
+	jal move_big_star
+	sw $v0, starAddress4
+
+	lw $a0, starAddress5
+	jal move_small_star
+	sw $v0, starAddress5
+
+	lw $a0, starAddress6
+	jal move_small_star
+	sw $v0, starAddress6
+
+	lw $a0, starAddress7
+	jal move_small_star
+	sw $v0, starAddress7
+
+	lw $a0, starAddress8
+	jal move_small_star
+	sw $v0, starAddress8
+
+	lw $a0, starAddress9
+	jal move_small_star
+	sw $v0, starAddress9
+
+	lw $a0, starAddress10
+	jal move_small_star
+	sw $v0, starAddress10
+
+	lw $a0, starAddress11
+	jal move_small_star
+	sw $v0, starAddress11
+
+	lw $a0, starAddress12
+	jal move_small_star
+	sw $v0, starAddress12
+
+	lw $a0, starAddress13
+	jal move_small_star
+	sw $v0, starAddress13
+
+	lw $a0, starAddress14
+	jal move_small_star
+	sw $v0, starAddress14
+
+	lw $a0, starAddress15
+	jal move_small_star
+	sw $v0, starAddress15
+
 	jal draw_ship
 	jal keypress
 	
@@ -472,7 +545,7 @@ draw_obst1:
 	sw $t5, -5632($a0) # erase
 	
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x1000f800, random_obst_address # don't exit but update a counter for how many meteors are on screen
+	bgt, $a0, 0x1000f800, random_obst_address # don't exit but get new meteor address
 	bgt, $a0, 0x1000f600, draw_obst1_11
 	bgt, $a0, 0x1000f400, draw_obst1_10
 	bgt, $a0, 0x1000f200, draw_obst1_9
@@ -1011,42 +1084,34 @@ heart0:
 	j draw_game_over
 
 ########## STAR BACKGROUND ##########
-random_star_address:
+random_star_address1:
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 	
 	li $v0, 42
 	li $a0, 5 # id 5
-	li $a1, 50 # 0 <= int < 50
+	li $a1, 45 # 0 <= int < 45
 	syscall
 	
 	sll $a0, $a0, 9 # a0 * 512
+	addi $a0, $a0, 2536
 	addi $a0, $a0, DISPLAYADDRESS
 	addi $v0, $a0, 0 # return in v0
 	
-	lw $ra, 0($sp) # pop ra from stack
-	addi $sp, $sp, 4
-	jr $ra
+	j go_back
 
-delay_star1:
-	lb $t0, starSpeed1
+delay_star:
+	lb $t0, starSpeed
 	addi $t0, $t0, -1
-	sb $t0, starSpeed1
-	addi $v0, $a0, 0 # don't change star location
-	jr $ra
-	
-delay_star2:
-	lb $t0, starSpeed2
-	addi $t0, $t0, -1
-	sb $t0, starSpeed2
+	sb $t0, starSpeed
 	addi $v0, $a0, 0 # don't change star location
 	jr $ra
 	
 move_big_star:
-	lb $t0, starSpeed1
-	bgtz, $t0, delay_star1
-	li $t0, STARSPEED1
-	sb $t0, starSpeed1
+	lb $t0, starSpeed
+	bgtz, $t0, delay_star # don't update location yet
+	li $t0, STARSPEED # reset star speed
+	sb $t0, starSpeed
 	
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
@@ -1055,18 +1120,19 @@ move_big_star:
 	li $t1, PURPLE
 	li $t2, LIGHTPURPLE
 	li $t3, BLACK
-	
-	addi $t4, $a0, 0 # save star address
+	sw $t3, 20($a0) # erase rightmost
+
+	addi $t4, $a0, 0 # store star address
 	
 	li $t5, 512
 	subi $a0, $a0, DISPLAYADDRESS
 	div $a0, $t5
 	mfhi $t5
-	beqz $t5, random_star_address
 	beq $t5, 508, move_big_star2
 	beq $t5, 504, move_big_star3
 	beq $t5, 500, move_big_star4
 	beq $t5, 496, move_big_star5
+	beq $t5, 492, random_star_address1
 	
 move_big_star1:
 	addi $a0, $t4, 0 # restore star address
@@ -1092,19 +1158,32 @@ erase_big_star:
 	sw $t3, -1012($a0)
 	sw $t3, 524($a0)
 	sw $t3, 1036($a0)
-	sw $t3, 20($a0)
 	
 	addi $v0, $a0, -4 # update address
 	
-	lw $ra, 0($sp) # pop from stack
-	addi $sp, $sp, 4
-	jr $ra
+	j go_back
+
+random_star_address2:
+	addi $sp, $sp, -4 # push ra to stack
+	sw $ra, 0($sp)
+	
+	li $v0, 42
+	li $a0, 5 # id 5
+	li $a1, 50 # 0 <= int < 50
+	syscall
+	
+	sll $a0, $a0, 9 # a0 * 512
+	addi $a0, $a0, -8 # so that it appears on 2nd pixel from the left
+	addi $a0, $a0, DISPLAYADDRESS
+	addi $v0, $a0, 0 # return in v0
+	
+	j go_back
 
 move_small_star:
-	lb $t0, starSpeed2
-	bgtz, $t0, delay_star2
-	li $t0, STARSPEED2
-	sb $t0, starSpeed2
+	lb $t0, starSpeed
+	bgtz, $t0, delay_star
+	li $t0, STARSPEED
+	sb $t0, starSpeed
 
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
@@ -1116,10 +1195,12 @@ move_small_star:
 	sw $t1, 4($a0)
 	
 	addi $v0, $a0, -4 # update address
+	li $t0, 512 # if it will go across the screen, get random location
+	div $v0, $t0
+	mfhi, $t4
+	beq $t4, 508, random_star_address2 # if it would appear on right side again
 	
-	lw $ra, 0($sp) # pop from stack
-	addi $sp, $sp, 4
-	jr $ra
+	j go_back
 
 ########## SCREEN FUNCTIONS ##########
 draw_start_screen:
