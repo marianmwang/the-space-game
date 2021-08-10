@@ -113,7 +113,8 @@
 # collisions speed
 .eqv 	CHECKSPEED 100
 # pick up speed
-.eqv 	PICKUPSPEED 2000
+.eqv 	PICKUPAPPEAR  	3000
+.eqv  	PICKUPDISAPPEAR 1000
 
 # game over location
 .eqv 	GAME_OVER 		0x1000AAAC
@@ -150,7 +151,7 @@
 	checkSpeed: 	.byte 0
 
 	# PICKUPS
-	pickupSpeed: 	.half 200
+	pickupSpeed: 	.half 0
 	heartPickup: 	.word 0
 
 .text
@@ -469,7 +470,7 @@ draw_obst1:
 	sw $t5, -5632($a0) # erase
 	
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x1000f800, random_location1 # don't exit but update a counter for how many meteors are on screen
+	bgt, $a0, 0x1000f800, random_obst_address # don't exit but update a counter for how many meteors are on screen
 	bgt, $a0, 0x1000f600, draw_obst1_11
 	bgt, $a0, 0x1000f400, draw_obst1_10
 	bgt, $a0, 0x1000f200, draw_obst1_9
@@ -581,7 +582,7 @@ draw_obst2:
 	# erase topmost pixel
 	sw $t5, -8192($a0)
 	# skip certain rows if at the bottom
-	bgt, $a0, 0x10010200, random_location1
+	bgt, $a0, 0x10010200, random_obst_address
 	bgt, $a0, 0x10010000, draw_obst2_16
 	bgt, $a0, 0x1000fe00, draw_obst2_15
 	bgt, $a0, 0x1000fc00, draw_obst2_14
@@ -814,30 +815,45 @@ delay_pickup:
 	jr $ra
 
 draw_pickup:
-	lh $t0, pickupSpeed
-	bgtz $t0, delay_pickup
-	li $t0, PICKUPSPEED
-	sh $t0, pickupSpeed # reset pickup counter after you gain life
-
 	addi $sp, $sp, -4 # push ra to stack
 	sw $ra, 0($sp)
 
-	jal random_location_anywhere # gives random location in v0
-	sw $v0, heartPickup # store the location of the heart
+	lh $t4, pickupSpeed # load pick up speed
+	addi $t4, $t4, -1 # decrement
+	sh $t4, pickupSpeed
 
-	addi $t0, $v0, 0 # move random location to t0
+	blez $t4, new_heart_location # if pickupSpeed <= 0, reset
+	blt $t4, PICKUPDISAPPEAR, go_back # if 0 < pickupSpeed < PICKUPDISAPPEAR, do nothing
+	beq $t4, PICKUPDISAPPEAR, erase_heart_pickup # if pickupSpeed = PICKUPDISAPPEAR, make it disappear
+
+	# else, continue to draw the pickup
+
+	lw $t0, heartPickup
 	li $t3, xGREEN # get colours
 	li $t2, xLIGHTGREEN
 	
 	jal draw_heart
-	j go_back
+	j go_back # pop ra from stack
 
 erase_heart_pickup:
 	li $t3, BLACK
 	li $t2, BLACK
 	lw $t0, heartPickup
 	jal draw_heart # erase the pickup
-	j gain_life
+	j go_back
+
+new_heart_location: 
+	li $t4, PICKUPAPPEAR # reset pickupSpeed to PICKUPAPPEAR
+	sh $t4, pickupSpeed
+
+	jal random_location_anywhere
+	sw $v0, heartPickup # store new heart location
+
+	lw $t0, heartPickup
+	li $t3, xGREEN
+	li $t2, xLIGHTGREEN
+	jal draw_heart
+	j go_back # go back to main play_game
 
 random_location_anywhere:
 	addi $sp, $sp, -4 # push ra to stack
@@ -922,12 +938,20 @@ check_overlaps:
 	beq $t1, DARKRED, lose_life
 	beq $t1, LBROWN, lose_life
 	beq $t1, DBROWN, lose_life
-	beq $t1, xGREEN, erase_heart_pickup
-	beq $t1, xLIGHTGREEN, erase_heart_pickup
+	beq $t1, xGREEN, gain_life
+	beq $t1, xLIGHTGREEN, gain_life
 
 	jr $ra
 
 gain_life:
+	lw $t0, heartPickup
+	li $t2, BLACK
+	li $t3, BLACK
+	jal draw_heart # erase the pickup heart
+
+	li $t4, PICKUPDISAPPEAR # reset pickupSpeed to PICKUPDISAPPEAR
+	sh $t4, pickupSpeed
+
 	lb $t4, lives
 	beq $t4, 5, go_back # don't give them more live
 
