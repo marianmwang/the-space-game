@@ -21,13 +21,13 @@
 # Which approved features have been implemented for milestone 3?
 # (See the assignment handout for the list of additional features)
 # 1. Different levels
-# 2. Increase in difficulty as game progresses
-# 3. Scoring system
+# 2. Pick-ups
+# 3. Increase in difficulty as game progresses
 # 4. Enemy ships
-# 5. Pick-ups
+# 5. Scoring system
 #
 # Link to video demonstration for final submission:
-# -(insert YouTube / MyMedia / other URL here). Make sure we can view it!
+# -https://youtu.be/uXLteIIe4Gw
 #
 # Are you OK with us sharing the video with people outside course staff?
 # -Yes: https://github.com/marian-wang/csc258final
