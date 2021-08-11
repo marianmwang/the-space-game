@@ -24,12 +24,13 @@
 # 2. Increase in difficulty as game progresses
 # 3. Scoring system
 # 4. Enemy ships
+# 5. Pick-ups
 #
 # Link to video demonstration for final submission:
 # -(insert YouTube / MyMedia / other URL here). Make sure we can view it!
 #
 # Are you OK with us sharing the video with people outside course staff?
-# -yes, and please share this project github link as well!
+# -Yes: https://github.com/marian-wang/csc258final
 #
 # Any additional information that the TA needs to know:# -(write here, if any)
 #
@@ -1525,6 +1526,9 @@ restart:
 	li $s2, 0
 	li $s3, 0
 	li $s4, 0
+
+	li $t0, 0
+	sh $t0, pickupSpeed	
 
 	jal draw_countdown # countdown
 	j play_game # get random location for obstacle
