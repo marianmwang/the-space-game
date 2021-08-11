@@ -195,83 +195,83 @@ welcome:
 
 ########## MAIN PROGRAM ##########
 play_game:
-	# # pretty star background
-	# lw $a0, starAddress1
-	# jal move_big_star
-	# sw $v0, starAddress1
+	# pretty star background
+	lw $a0, starAddress1
+	jal move_big_star
+	sw $v0, starAddress1
 
-	# lw $a0, starAddress2
-	# jal move_big_star
-	# sw $v0, starAddress2
+	lw $a0, starAddress2
+	jal move_big_star
+	sw $v0, starAddress2
 	
-	# lw $a0, starAddress3
-	# jal move_big_star
-	# sw $v0, starAddress3
+	lw $a0, starAddress3
+	jal move_big_star
+	sw $v0, starAddress3
 
-	# lw $a0, starAddress4
-	# jal move_big_star
-	# sw $v0, starAddress4
+	lw $a0, starAddress4
+	jal move_big_star
+	sw $v0, starAddress4
 
-	# lw $a0, starAddress5
-	# jal move_small_star
-	# sw $v0, starAddress5
+	lw $a0, starAddress5
+	jal move_small_star
+	sw $v0, starAddress5
 
-	# lw $a0, starAddress6
-	# jal move_small_star
-	# sw $v0, starAddress6
+	lw $a0, starAddress6
+	jal move_small_star
+	sw $v0, starAddress6
 
-	# lw $a0, starAddress7
-	# jal move_small_star
-	# sw $v0, starAddress7
+	lw $a0, starAddress7
+	jal move_small_star
+	sw $v0, starAddress7
 
-	# lw $a0, starAddress8
-	# jal move_small_star
-	# sw $v0, starAddress8
+	lw $a0, starAddress8
+	jal move_small_star
+	sw $v0, starAddress8
 
-	# lw $a0, starAddress9
-	# jal move_small_star
-	# sw $v0, starAddress9
+	lw $a0, starAddress9
+	jal move_small_star
+	sw $v0, starAddress9
 
-	# lw $a0, starAddress10
-	# jal move_small_star
-	# sw $v0, starAddress10
+	lw $a0, starAddress10
+	jal move_small_star
+	sw $v0, starAddress10
 
-	# lw $a0, starAddress11
-	# jal move_small_star
-	# sw $v0, starAddress11
+	lw $a0, starAddress11
+	jal move_small_star
+	sw $v0, starAddress11
 
-	# lw $a0, starAddress12
-	# jal move_small_star
-	# sw $v0, starAddress12
+	lw $a0, starAddress12
+	jal move_small_star
+	sw $v0, starAddress12
 
-	# lw $a0, starAddress13
-	# jal move_small_star
-	# sw $v0, starAddress13
+	lw $a0, starAddress13
+	jal move_small_star
+	sw $v0, starAddress13
 
-	# lw $a0, starAddress14
-	# jal move_small_star
-	# sw $v0, starAddress14
+	lw $a0, starAddress14
+	jal move_small_star
+	sw $v0, starAddress14
 
-	# lw $a0, starAddress15
-	# jal move_small_star
-	# sw $v0, starAddress15
+	lw $a0, starAddress15
+	jal move_small_star
+	sw $v0, starAddress15
 
 	# player movements
 	jal draw_ship
 	jal keypress
 	
-	# # draw enemy ships 
-	# lw $a0, enemyShipLocation1
-	# jal draw_enemy_ship_loading
-	# sw $v0, enemyShipLocation1
+	# draw enemy ships 
+	lw $a0, enemyShipLocation1
+	jal draw_enemy_ship_loading
+	sw $v0, enemyShipLocation1
 	
-	# lw $a0, enemyShipLocation2
-	# jal draw_enemy_ship_loading
-	# sw $v0, enemyShipLocation2
+	lw $a0, enemyShipLocation2
+	jal draw_enemy_ship_loading
+	sw $v0, enemyShipLocation2
 	
-	# lw $a0, enemyShipLocation3
-	# jal draw_enemy_ship_loading
-	# sw $v0, enemyShipLocation3
+	lw $a0, enemyShipLocation3
+	jal draw_enemy_ship_loading
+	sw $v0, enemyShipLocation3
 
 	# draw obstacles
 	lw $a0, obstacleAddress1
@@ -292,15 +292,15 @@ play_game:
 	# check collisions
 	jal check_player 
 
-	# # update score
-	# jal point_counter_ones
-	# jal point_counter_tens
-	# jal point_counter_hundreds
-	# jal point_counter_thousands
-	# jal point_counter_ten_thousands
+	# update score
+	jal point_counter_ones
+	jal point_counter_tens
+	jal point_counter_hundreds
+	jal point_counter_thousands
+	jal point_counter_ten_thousands
 
-	# jal check_score1 # increase difficulty if needed
-	
+	jal check_score1 # increase difficulty if needed, draw moon if needed
+
 	li $a0, DELAY # wait this many ms before updating
 	jal pause
 	j play_game
@@ -2965,6 +2965,14 @@ draw_one:
 	sw $t1, 9260($t0)
 	sw $t1, 9264($t0)
 	sw $t1, 9268($t0)
+	jr $ra
+
+
+	sw $t1, 0($t0)
+	sw $t1, 4($t0)
+	sw $t1, 512($t0)
+	sw $t1, 516($t0)
+	addi $t0, $t0, 1024
 	jr $ra
 
 ########## DRAW EXPLOSION ##########
